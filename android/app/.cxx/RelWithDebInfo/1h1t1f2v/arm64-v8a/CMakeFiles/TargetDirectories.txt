@@ -1,0 +1,2 @@
+C:/Mr-JanX-Ramraj-Frontend-main/android/app/.cxx/RelWithDebInfo/1h1t1f2v/arm64-v8a/CMakeFiles/edit_cache.dir
+C:/Mr-JanX-Ramraj-Frontend-main/android/app/.cxx/RelWithDebInfo/1h1t1f2v/arm64-v8a/CMakeFiles/rebuild_cache.dir
