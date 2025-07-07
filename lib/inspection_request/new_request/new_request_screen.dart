@@ -333,7 +333,6 @@ class _NewRequestScreenState extends State<NewRequestScreen> {
 
 class _InspectRequestWidget extends StatelessWidget {
   const _InspectRequestWidget({
-    super.key,
     required this.title,
     required this.isClicked,
   });

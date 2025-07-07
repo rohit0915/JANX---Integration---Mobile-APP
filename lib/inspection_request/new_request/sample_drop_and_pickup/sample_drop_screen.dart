@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:jan_x/order_detils/product_order_details_screen.dart';
-import 'package:jan_x/order_summary/order_summary_from_my_orders.dart';
 import 'package:jan_x/order_summary/order_summary_from_sample_drop.dart';
 import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';

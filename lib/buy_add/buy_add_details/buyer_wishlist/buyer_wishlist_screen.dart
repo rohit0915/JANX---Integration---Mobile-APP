@@ -1,9 +1,5 @@
-
-
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:jan_x/about_janx/about_janx_screen.dart';
 import 'package:jan_x/buy_add/buy_add_details/buy_add_details_screen.dart';
 import 'package:jan_x/post_buy_ads/post_by_ad_screen.dart';
 import 'package:jan_x/sale_ads/category_screen/category_screen.dart';

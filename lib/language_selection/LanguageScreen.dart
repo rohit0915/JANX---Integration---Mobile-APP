@@ -1,4 +1,5 @@
-import 'dart:async';
+// ignore_for_file: must_be_immutable
+
 import 'package:flutter/material.dart';
 import 'package:jan_x/auth/signIn_screen.dart';
 import 'package:jan_x/language_selection/widget/custom_language.dart';
@@ -7,11 +8,10 @@ import 'package:jan_x/widgets/custom_button.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
 
 class LanguageScreen extends StatefulWidget {
-  @override
   bool isFromProfile = false; // Optional boolean parameter
 
   // Constructor with optional parameter
-  LanguageScreen({required this.isFromProfile});
+   LanguageScreen({required this.isFromProfile});
 
   State createState() => _LanguageScreenState(isFromProfile: isFromProfile);
 }

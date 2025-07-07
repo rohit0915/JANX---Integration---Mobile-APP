@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:jan_x/order_summary/order_summary_from_my_orders.dart';
 import 'package:jan_x/post_sell_ad/call_screen/call_screen.dart';
 import 'package:jan_x/post_sell_ad/chat_screen/chat_screen.dart';
 import 'package:jan_x/post_sell_ad/view_details/view_details_screen.dart';

@@ -1,9 +1,6 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:jan_x/auth/signIn_screen.dart';
 import 'package:jan_x/home_screen/home_screen.dart';
-import 'package:jan_x/language_selection/widget/custom_language.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
 import 'package:otp_text_field/otp_text_field.dart';

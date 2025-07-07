@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:jan_x/order_detils/product_order_details_screen.dart';
-import 'package:jan_x/order_summary/buyer_contact_Details_Screen.dart';
 import 'package:jan_x/order_summary/payment/order_success_message_screen.dart';
 import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';

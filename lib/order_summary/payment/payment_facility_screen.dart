@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:jan_x/order_summary/payment/payment_success_from_inspection.dart';
-import 'package:jan_x/order_summary/payment/payment_success_screen.dart';
 import 'package:jan_x/transport_facility/booking_confirmation/booking_confirmation_screen.dart';
 import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';

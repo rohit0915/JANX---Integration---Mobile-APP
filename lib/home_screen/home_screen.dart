@@ -1,10 +1,8 @@
 // ignore_for_file: prefer_const_constructors
 
-import 'package:carousel_slider/carousel_options.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:dots_indicator/dots_indicator.dart';
 import 'package:flutter/material.dart';
-import 'package:jan_x/auth/otp_screen.dart';
 import 'package:jan_x/auth/signIn_screen.dart';
 import 'package:jan_x/buy_add/buy_add_screen.dart';
 import 'package:jan_x/future_services/tutorial_videos/tutorial_video_screen.dart';

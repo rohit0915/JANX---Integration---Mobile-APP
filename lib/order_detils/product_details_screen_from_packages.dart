@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:jan_x/order_summary/order_summary_from_my_orders.dart';
 import 'package:jan_x/packaging_labeling/tracking_screen_of_packaging.dart';
 import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
-import 'package:jan_x/wish_karo_screen/wish_karo_track_order/wish_karo_track_screen.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
 
 class ProductOrderDetailsFromPackagesScreen extends StatelessWidget {

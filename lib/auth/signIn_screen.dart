@@ -1,6 +1,6 @@
-import 'dart:convert';
+
 import 'dart:developer';
-import 'package:http/http.dart' as http;
+
 import 'package:flutter/material.dart';
 import 'package:jan_x/auth/otp_screen.dart';
 import 'package:jan_x/auth/reset_password_screen.dart';
@@ -12,7 +12,6 @@ import 'package:jan_x/widgets/custom_button.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
 
-import 'signup_screen.dart';
 
 class SignInScreen extends StatefulWidget {
   @override

@@ -162,7 +162,8 @@ class CustomButton_continue extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 300,
+      width: 300,y
+      
       height: 50,
       child: ElevatedButton(
         onPressed: onPressed,
@@ -180,14 +181,14 @@ class CustomButton_continue extends StatelessWidget {
             children: [
               Text(
                 text,
-                style: TextStyle(
+                style:const  TextStyle(
                   color: Colors.black,
                   fontSize: 18.0,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              Spacer(),
-              Icon(
+              const Spacer(),
+              const Icon(
                 Icons.arrow_forward, // Use the icon passed to the widget
                 color: Colors.black, // Icon color
                 size: 24.0, // Icon size

@@ -1,15 +1,12 @@
-// ignore_for_file: prefer_const_constructors
+// ignore_for_file: prefer_const_constructors, unused_element, must_be_immutable
 
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:jan_x/post_buy_ads/tap_on_post_buy/tap_on_post_by_screen.dart';
 import 'package:jan_x/post_buy_ads/tap_on_post_buy/widgets/completed_screen_widget.dart';
 import 'package:jan_x/post_buy_ads/tap_on_post_buy/widgets/my_add_post_buy_widget.dart';
 import 'package:jan_x/post_buy_ads/widgets/new_sale_widget.dart';
-import 'package:jan_x/post_sell_ad/my_ad_onTap_screen.dart';
-import 'package:jan_x/published_add/published_buy_screen.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
@@ -269,7 +266,6 @@ Widget _myAdsContent(BuildContext context) {
 }
 
 Widget _completedContent(BuildContext context) {
-    bool isClickedCompleted2=false;
 
   return SingleChildScrollView(
     child: Column(

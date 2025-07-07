@@ -1,8 +1,7 @@
-// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, library_private_types_in_public_api
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, library_private_types_in_public_api, must_be_immutable
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:jan_x/inspection_request/widgets/complete_inspection_widgets.dart';
 import 'package:jan_x/post_sell_ad/call_screen/call_screen.dart';
 import 'package:jan_x/post_sell_ad/chat_screen/chat_screen.dart';
 import 'package:jan_x/post_sell_ad/post_sell_ad_screen.dart';
@@ -138,9 +137,7 @@ class _MyAdonTapScreenState extends State<MyAdonTapScreen> {
 
       case SelectedTab.completed:
         return CompletedContent();
-      default:
-        return myAdMethod(context);
-    }
+      }
   }
 
   Widget _newSaleContent() {
