@@ -1,0 +1,2 @@
+D:/Flyweis/JANX---Integration---Mobile-APP/android/app/.cxx/RelWithDebInfo/613d4r1p/arm64-v8a/CMakeFiles/edit_cache.dir
+D:/Flyweis/JANX---Integration---Mobile-APP/android/app/.cxx/RelWithDebInfo/613d4r1p/arm64-v8a/CMakeFiles/rebuild_cache.dir

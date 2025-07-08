@@ -162,7 +162,7 @@ class CustomButton_continue extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 300,y
+      width: 300,
       
       height: 50,
       child: ElevatedButton(
