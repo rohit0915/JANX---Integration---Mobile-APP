@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:jan_x/profile/profile_other_screens/mitra/mitra_product_details/mitra_product_type3.dart';
 import 'package:jan_x/transport_facility/faculity_complete_bill/faculity_complete_bill_screen.dart';
 import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';

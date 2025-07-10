@@ -1,6 +1,3 @@
-
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:jan_x/auth/otp_screen.dart';
 import 'package:jan_x/auth/reset_password_screen.dart';
@@ -11,7 +8,9 @@ import 'package:jan_x/widgets/custom_button.dart';
 // import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
-
+import 'package:jan_x/services/auth_services.dart';
+import 'package:get/get.dart';
+import 'dart:convert';
 
 class SignInScreen extends StatefulWidget {
   @override
@@ -23,8 +22,13 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen>
     with SingleTickerProviderStateMixin {
   TextEditingController emailController = TextEditingController();
+  TextEditingController nameController = TextEditingController();
+  TextEditingController phoneController = TextEditingController();
+  bool isLoading = false;
+  String errorMessage = '';
   @override
   Widget build(BuildContext context) {
+    final AuthServices authServices = Get.find<AuthServices>();
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xff444444),
@@ -62,6 +66,7 @@ class _SignInScreenState extends State<SignInScreen>
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18.0),
               child: buildCustomTextField(
+                controller: nameController,
                 hintText: "Enter your Name",
                 suffixIcon: const Icon(Icons.person),
               ),
@@ -69,6 +74,7 @@ class _SignInScreenState extends State<SignInScreen>
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18.0),
               child: buildCustomTextField(
+                controller: phoneController,
                 hintText: "Enter your phone Number",
                 suffixIcon: const Icon(Icons.phone_android),
               ),
@@ -103,16 +109,41 @@ class _SignInScreenState extends State<SignInScreen>
                     children: [
                       CustomButton1(
                         text: "Login",
-                        onPressed: () {
-                          log(" widget.isMitra:${ widget.isMitra}");
-                          if (widget.isMitra) {
-
-                          } else {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => OtpScreen(),
-                              ),
+                        onPressed: () async {
+                          setState(() {
+                            isLoading = true;
+                            errorMessage = '';
+                          });
+                          try {
+                            final response = await authServices.sendOtp(
+                              name: nameController.text.trim(),
+                              phoneNumber: phoneController.text.trim(),
                             );
+                            if (response.statusCode == 200) {
+                              final responseData = jsonDecode(response.body);
+                              final otp = responseData['data']?.toString();
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => OtpScreen(
+                                    phoneNumber: phoneController.text.trim(),
+                                    otp: otp,
+                                  ),
+                                ),
+                              );
+                            } else {
+                              setState(() {
+                                errorMessage =
+                                    'Failed to send OTP. Please try again.';
+                              });
+                            }
+                          } catch (e) {
+                            setState(() {
+                              errorMessage = e.toString();
+                            });
+                          } finally {
+                            setState(() {
+                              isLoading = false;
+                            });
                           }
                         },
                         width: Adaptive.w(42),
@@ -124,7 +155,7 @@ class _SignInScreenState extends State<SignInScreen>
                         textColor: const Color(0xffF4BC1C),
                         onPressed: () {},
                         color: const Color(0xff444444),
-                      borderColor: buttonColor,
+                        borderColor: buttonColor,
                       )
                     ],
                   )
@@ -171,7 +202,7 @@ Widget _buildTextHeader(
             fontSize: size ?? 14,
             fontWeight: fontWeight ??
                 FontWeight
-                    .w500, // Use the provided fontWeight or default to FontWeight.w500
+                    .w500, 
             fontFamily: 'Poppins',
             color: color ?? Colors.black),
       ),
@@ -196,7 +227,7 @@ Widget _buildText(
             fontSize: size ?? 14,
             fontWeight: fontWeight ??
                 FontWeight
-                    .w400, // Use the provided fontWeight or default to FontWeight.w500
+                    .w400, 
             // fontFamily: 'Poppins',
             color: color ?? Colors.black),
       ),
@@ -221,7 +252,7 @@ Widget _buildText1(
             fontSize: size ?? 14,
             fontWeight: fontWeight ??
                 FontWeight
-                    .w400, // Use the provided fontWeight or default to FontWeight.w500
+                    .w400, 
             fontFamily: 'Poppins',
             color: color ?? Colors.black),
       ),

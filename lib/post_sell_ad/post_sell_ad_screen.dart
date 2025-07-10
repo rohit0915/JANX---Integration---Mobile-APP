@@ -15,6 +15,9 @@ import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
+import 'package:get/get.dart';
+import 'package:jan_x/services/post_sell_ad_service.dart';
+import 'package:get_storage/get_storage.dart';
 
 class PostSellAdScreen extends StatefulWidget {
   PostSellAdScreen({super.key, this.selectedTab = SelectedTab.newSale});
@@ -30,6 +33,40 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
   String? selectedCrop;
   List<String> cropTypes = ['Wheat', 'Paddy', 'Moong'];
   String headerTitle = "Seller";
+
+  final PostSellAdService postSellAdService = Get.find<PostSellAdService>();
+  final box = GetStorage();
+
+  // Controllers for text fields
+  final TextEditingController cropTypeController = TextEditingController();
+  final TextEditingController varietyController = TextEditingController();
+  final TextEditingController startDateController = TextEditingController();
+  final TextEditingController endDateController = TextEditingController();
+  final TextEditingController approxQuantityController = TextEditingController();
+  final TextEditingController quantityTypeController = TextEditingController();
+  final TextEditingController minPriceController = TextEditingController();
+  final TextEditingController totalCostController = TextEditingController();
+  final TextEditingController locationController = TextEditingController();
+
+  bool mitraVerification = false;
+  List<String> productImages = [];
+  // List<Feature> otherFeatures = [];
+
+  bool isPosting = false;
+  String postError = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMyAds();
+  }
+
+  void _fetchMyAds() async {
+    final token = box.read('token');
+    if (token != null) {
+      await postSellAdService.getMyAds();
+    }
+  }
 
   void _handleDropdownChange(String? newValue) {
     setState(() {
@@ -350,7 +387,8 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
                   buildVSpacer(10),
                   Padding(
                     padding: EdgeInsets.only(left: Adaptive.w(8)),
-                    child: _buildText(title: "Color", color: const Color(0xffF4BC1C)),
+                    child: _buildText(
+                        title: "Color", color: const Color(0xffF4BC1C)),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(
@@ -378,7 +416,8 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
                   Padding(
                     padding: EdgeInsets.only(left: Adaptive.w(8)),
                     child: _buildText(
-                        title: "Foriegn Matter", color: const Color(0xffF4BC1C)),
+                        title: "Foriegn Matter",
+                        color: const Color(0xffF4BC1C)),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(
@@ -581,24 +620,35 @@ Widget _buildText(
 
 enum SelectedTab { newSale, myAds, completed }
 
-Widget _myAdsContent(BuildContext context ) {
-  return Center(
-      child: Column(
-    children: [
-      buildVSpacer(30),
-      const MyAdWidget(),
-      buildVSpacer(20),
-      const MyAdWidget(),
-      buildVSpacer(30),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18.0),
-        child: CustomButton(text: "Home", onPressed: () {
-          Navigator.pop(context);
-        }),
-      ),
-      buildVSpacer(50),
-    ],
-  ));
+Widget _myAdsContent(BuildContext context) {
+  final PostSellAdService postSellAdService = Get.find<PostSellAdService>();
+  return Obx(() {
+    if (postSellAdService.isLoading.value) {
+      return Center(child: CircularProgressIndicator());
+    }
+    if (postSellAdService.error.value.isNotEmpty) {
+      return Center(child: Text('Error: ' + postSellAdService.error.value));
+    }
+    if (postSellAdService.sellAds.isEmpty) {
+      return Center(child: Text('No ads found.'));
+    }
+    return ListView.builder(
+      shrinkWrap: true,
+      itemCount: postSellAdService.sellAds.length,
+      itemBuilder: (context, index) {
+        final ad = postSellAdService.sellAds[index];
+        return ListTile(
+          title: Text(ad.variety ?? 'No Title'),
+          subtitle: Text(
+    'Variety: ${ad.variety}\n'
+    'Min Price: ₹${ad.minPriceApprox}\n'
+    'Total Cost: ₹${ad.totalCostApprox}\n'
+    'Location: ${ad.location.join(', ')}',
+  ),
+        );
+      },
+    );
+  });
 }
 
 class CompletedContent extends StatefulWidget {
@@ -949,25 +999,27 @@ class _CompletedContentState extends State<CompletedContent> {
                   child: Column(
                     children: [
                       buildVSpacer(2.h),
-                      CompletedScreenFieldWidget(title: 'SELLER INFORMATION',
-                    
+                      CompletedScreenFieldWidget(
+                        title: 'SELLER INFORMATION',
                       ),
                       buildVSpacer(2.h),
-                      CompletedScreenFieldWidget(title: 'BUYER INFORMATION',
-                      title2: "BUYER INFORMATION",
+                      CompletedScreenFieldWidget(
+                        title: 'BUYER INFORMATION',
+                        title2: "BUYER INFORMATION",
                       ),
                       buildVSpacer(2.h),
-                    CompletedScreenFieldWidget(
-              title: 'MITRA INFORMATION',
-              title2: "MITRA INFORMATION",
-              id: "Mitra ID",
-            ),
+                      CompletedScreenFieldWidget(
+                        title: 'MITRA INFORMATION',
+                        title2: "MITRA INFORMATION",
+                        id: "Mitra ID",
+                      ),
                       buildVSpacer(2.h),
                       CompleteInspectionWidget2(
-                      title: "Inspection",
+                        title: "Inspection",
                       ),
                       buildVSpacer(2.h),
-                      CompleteInspectionWidget2(title: 'Transport Status',isBlur: true),
+                      CompleteInspectionWidget2(
+                          title: 'Transport Status', isBlur: true),
                       buildVSpacer(2.h),
                       CompleteInspectionWidget2(
                         title: 'PACKAGING & LABELING',
@@ -985,10 +1037,11 @@ class _CompletedContentState extends State<CompletedContent> {
           buildVSpacer(10.h),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18.0),
-            child: CustomButton(text: "Home", onPressed: () {
-                        Navigator.pop(context);
-
-            }),
+            child: CustomButton(
+                text: "Home",
+                onPressed: () {
+                  Navigator.pop(context);
+                }),
           ),
         ],
       ),
@@ -1045,13 +1098,15 @@ class _CompletedScreenFieldWidgetState
                       fontSize: 12.px,
                       color: grey),
                 ),
-            isClicked==false?    Icon(
-                  Icons.keyboard_arrow_down,
-                  color: grey,
-                ): Icon(
-                  Icons.keyboard_arrow_up,
-                  color: grey,
-                )
+                isClicked == false
+                    ? Icon(
+                        Icons.keyboard_arrow_down,
+                        color: grey,
+                      )
+                    : Icon(
+                        Icons.keyboard_arrow_up,
+                        color: grey,
+                      )
               ],
             ),
           ),

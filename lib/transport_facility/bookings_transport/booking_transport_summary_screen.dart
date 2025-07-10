@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:jan_x/order_summary/payment/payment_facility_screen.dart';
-import 'package:jan_x/transport_facility/bookings_transport/booking_transport_summary_screen.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';

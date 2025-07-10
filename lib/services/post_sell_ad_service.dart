@@ -1,17 +1,21 @@
 import 'dart:convert';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import '../model/sell_ad_models.dart';
 
 const String baseUrl = 'https://ramraj-janx-backend-code.vercel.app/api';
 
 class PostSellAdService extends GetxService {
+  final box = GetStorage();
   var isLoading = false.obs;
   var sellAds = <SellAdResponse>[].obs;
   var error = ''.obs;
 
   Future<http.Response> createSellAd(
-      SellAdRequest request, String token) async {
+    SellAdResponse request,
+  ) async {
+    final token = box.read('token');
     isLoading.value = true;
     try {
       final response = await http.post(
@@ -20,7 +24,7 @@ class PostSellAdService extends GetxService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode(request.toJson()),
+        body: jsonEncode(request),
       );
       isLoading.value = false;
       return response;
@@ -32,7 +36,10 @@ class PostSellAdService extends GetxService {
   }
 
   Future<http.Response> updateSellAd(
-      String adId, SellAdRequest request, String token) async {
+    String adId,
+    SellAdResponse request,
+  ) async {
+    final token = box.read('token');
     isLoading.value = true;
     try {
       final response = await http.put(
@@ -41,7 +48,7 @@ class PostSellAdService extends GetxService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode(request.toJson()),
+        body: jsonEncode(request),
       );
       isLoading.value = false;
       return response;
@@ -52,7 +59,10 @@ class PostSellAdService extends GetxService {
     }
   }
 
-  Future<http.Response> deleteSellAd(String adId, String token) async {
+  Future<http.Response> deleteSellAd(
+    String adId,
+  ) async {
+    final token = box.read('token');
     isLoading.value = true;
     try {
       final response = await http.delete(
@@ -70,7 +80,8 @@ class PostSellAdService extends GetxService {
     }
   }
 
-  Future<List<SellAdResponse>> getMyAds(String token) async {
+  Future<List<SellAdResponse>> getMyAds() async {
+    final token = box.read('token');
     isLoading.value = true;
     try {
       final response = await http.get(
@@ -80,9 +91,7 @@ class PostSellAdService extends GetxService {
         },
       );
       isLoading.value = false;
-      if (response.statusCode == 200) {
-     
-      }
+      if (response.statusCode == 200) {}
       return sellAds;
     } catch (e) {
       isLoading.value = false;
@@ -91,7 +100,8 @@ class PostSellAdService extends GetxService {
     }
   }
 
-  Future<List<SellAdResponse>> getMyCompletedAds(String token) async {
+  Future<List<SellAdResponse>> getMyCompletedAds() async {
+    final token = box.read('token');
     isLoading.value = true;
     try {
       final response = await http.get(
@@ -101,9 +111,7 @@ class PostSellAdService extends GetxService {
         },
       );
       isLoading.value = false;
-      if (response.statusCode == 200) {
-     
-      }
+      if (response.statusCode == 200) {}
       return sellAds;
     } catch (e) {
       isLoading.value = false;
@@ -112,7 +120,8 @@ class PostSellAdService extends GetxService {
     }
   }
 
-  Future<SellAdResponse?> getSingleAd(String adId, String token) async {
+  Future<SellAdResponse?> getSingleAd(String adId, ) async {
+    final token=box.read('token');
     isLoading.value = true;
     try {
       final response = await http.get(
@@ -122,9 +131,7 @@ class PostSellAdService extends GetxService {
         },
       );
       isLoading.value = false;
-      if (response.statusCode == 200) {
-       
-      }
+      if (response.statusCode == 200) {}
       return null;
     } catch (e) {
       isLoading.value = false;
