@@ -10,7 +10,6 @@ import 'package:jan_x/post_sell_ad/chat_screen/chat_screen.dart';
 import 'package:jan_x/post_sell_ad/my_ad_onTap_screen.dart';
 import 'package:jan_x/post_sell_ad/view_details/view_details_screen.dart';
 import 'package:jan_x/post_sell_ad/widgets/post_sell_widgets_widget.dart';
-import 'package:jan_x/published_add/published_buy_screen.dart';
 import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';

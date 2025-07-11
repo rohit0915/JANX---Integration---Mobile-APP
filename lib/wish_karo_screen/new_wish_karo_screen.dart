@@ -6,7 +6,6 @@ import 'package:jan_x/post_sell_ad/add_location/add_location_screen.dart';
 import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
-import 'package:jan_x/wish_karo_screen/wish_karo_screen.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
 
 class NewWishKaroScreen extends StatefulWidget {
