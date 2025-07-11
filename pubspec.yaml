@@ -22,6 +22,7 @@ dependencies:
   http: ^1.4.0
   get:
   get_storage: ^2.1.1
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:

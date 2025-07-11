@@ -15,6 +15,7 @@ class PostSellAdService extends GetxService {
   Future<http.Response> createSellAd(
     SellAdResponse request,
   ) async {
+    print("Sell Ad function has been called");
     final token = box.read('token');
     isLoading.value = true;
     try {
@@ -27,6 +28,7 @@ class PostSellAdService extends GetxService {
         body: jsonEncode(request),
       );
       isLoading.value = false;
+      print(response.body);
       return response;
     } catch (e) {
       isLoading.value = false;
@@ -120,8 +122,10 @@ class PostSellAdService extends GetxService {
     }
   }
 
-  Future<SellAdResponse?> getSingleAd(String adId, ) async {
-    final token=box.read('token');
+  Future<SellAdResponse?> getSingleAd(
+    String adId,
+  ) async {
+    final token = box.read('token');
     isLoading.value = true;
     try {
       final response = await http.get(

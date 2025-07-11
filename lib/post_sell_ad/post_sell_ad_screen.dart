@@ -18,6 +18,7 @@ import 'package:responsive_sizer/responsive_sizer.dart';
 import 'package:get/get.dart';
 import 'package:jan_x/services/post_sell_ad_service.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:jan_x/model/sell_ad_models.dart';
 
 class PostSellAdScreen extends StatefulWidget {
   PostSellAdScreen({super.key, this.selectedTab = SelectedTab.newSale});
@@ -30,8 +31,19 @@ class PostSellAdScreen extends StatefulWidget {
 bool isOtherServiceClicked = false;
 
 class _PostSellAdScreenState extends State<PostSellAdScreen> {
-  String? selectedCrop;
-  List<String> cropTypes = ['Wheat', 'Paddy', 'Moong'];
+  String? selectedCropId;
+  String? selectedVarietyId;
+  // Example data with IDs (replace with your real data)
+  final List<Map<String, String>> cropTypes = [
+    {'id': '676696c179aadc8eaa30d87f', 'name': 'Wheat'},
+    {'id': '676696c179aadc8eaa30d880', 'name': 'Paddy'},
+    {'id': '676696c179aadc8eaa30d881', 'name': 'Moong'},
+  ];
+  final List<Map<String, String>> varietyTypes = [
+    {'id': '6766971279aadc8eaa30d890', 'name': 'Type 1'},
+    {'id': '6766971279aadc8eaa30d891', 'name': 'Type 2'},
+    {'id': '6766971279aadc8eaa30d892', 'name': 'Type 3'},
+  ];
   String headerTitle = "Seller";
 
   final PostSellAdService postSellAdService = Get.find<PostSellAdService>();
@@ -42,7 +54,8 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
   final TextEditingController varietyController = TextEditingController();
   final TextEditingController startDateController = TextEditingController();
   final TextEditingController endDateController = TextEditingController();
-  final TextEditingController approxQuantityController = TextEditingController();
+  final TextEditingController approxQuantityController =
+      TextEditingController();
   final TextEditingController quantityTypeController = TextEditingController();
   final TextEditingController minPriceController = TextEditingController();
   final TextEditingController totalCostController = TextEditingController();
@@ -66,12 +79,6 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
     if (token != null) {
       await postSellAdService.getMyAds();
     }
-  }
-
-  void _handleDropdownChange(String? newValue) {
-    setState(() {
-      selectedCrop = newValue;
-    });
   }
 
   bool value = true;
@@ -189,13 +196,27 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
         _buildText(title: "Type of Crop", color: const Color(0xffF4BC1C)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12),
-          child: buildCustomTextFieldWithDropdown(),
+          child: buildCustomTextFieldWithDropdown(
+            value: selectedCropId,
+            items: cropTypes,
+            onChanged: (val) => setState(() => selectedCropId = val),
+            hint: 'Select Crop',
+            getLabel: (item) => item['name']!,
+            getValue: (item) => item['id']!,
+          ),
         ),
         buildVSpacer(20),
         _buildText(title: "Variety", color: const Color(0xffF4BC1C)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12),
-          child: buildCustomTextFieldWithDropdown(),
+          child: buildCustomTextFieldWithDropdown(
+            value: selectedVarietyId,
+            items: varietyTypes,
+            onChanged: (val) => setState(() => selectedVarietyId = val),
+            hint: 'Select Variety',
+            getLabel: (item) => item['name']!,
+            getValue: (item) => item['id']!,
+          ),
         ),
         buildVSpacer(20),
         Padding(
@@ -483,8 +504,7 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
                         value: true,
                         onChanged: (bool? newValue) {
                           setState(() {
-                            value = newValue ??
-                                false; // Update the value of the checkbox
+                            value = newValue ?? false;
                           });
                         },
                         activeColor: const Color(0xffF4BC1C),
@@ -513,21 +533,24 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
                   ),
                   buildVSpacer(14.h),
                   CustomButton(
-                    text: saveButton == false ? "Save " : "Submit",
-                    onPressed: () {
-                      // Navigator.pop(context);
-                      if (!saveButton) {
-                        setState(() {
-                          saveButton = true;
-                        });
-                      } else {
-                        Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const PublishedBuyScreen(isFromSeller: true),
-                            ));
-                      }
+                    text: saveButton == false
+                        ? "Save "
+                        : isPosting
+                            ? "Posting..."
+                            : "Submit",
+                    onPressed: () async {
+                      final ad = SellAdResponse(
+                        cropType: selectedCropId ?? '',
+                        variety: selectedVarietyId ?? '',
+                        minPriceApprox: 1000,
+                        totalCostApprox: 5000,
+                        location: ['Test Location'],
+                      );
+                      final response = await postSellAdService.createSellAd(ad);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text('Status: ${response.statusCode}')),
+                      );
                     },
                     width: Adaptive.w(85),
                   ),
@@ -542,28 +565,36 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
     );
   }
 
-  Widget buildCustomTextFieldWithDropdown() {
+  Widget buildCustomTextFieldWithDropdown<ITEM>({
+    required String? value,
+    required List<ITEM> items,
+    required void Function(String?) onChanged,
+    required String Function(ITEM) getLabel,
+    required String Function(ITEM) getValue,
+    String? hint,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
-        border: Border.all(
-            color: const Color(0xffF4BC1C),
-            width: 2.0), // Yellow border around the container
-        borderRadius: BorderRadius.circular(5.0), // Rounded corners
+        border: Border.all(color: const Color(0xffF4BC1C), width: 2.0),
+        borderRadius: BorderRadius.circular(5.0),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: selectedCrop,
-          isExpanded: true, // Makes the dropdown expand to fill the container
+          value: (value != null && value.isNotEmpty) ? value : null,
+          isExpanded: true,
           icon: const Icon(Icons.arrow_drop_down),
           iconSize: 24,
           elevation: 16,
-          style: const TextStyle(color: Colors.black), // Text color
-          onChanged: _handleDropdownChange,
-          items: cropTypes.map<DropdownMenuItem<String>>((String value) {
+          style: const TextStyle(color: Colors.black),
+          onChanged: onChanged,
+          hint: hint != null
+              ? Text(hint, style: TextStyle(color: Colors.grey))
+              : null,
+          items: items.map<DropdownMenuItem<String>>((item) {
             return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
+              value: getValue(item),
+              child: Text(getLabel(item)),
             );
           }).toList(),
           dropdownColor: const Color(0xffF4BC1C),
@@ -640,11 +671,11 @@ Widget _myAdsContent(BuildContext context) {
         return ListTile(
           title: Text(ad.variety ?? 'No Title'),
           subtitle: Text(
-    'Variety: ${ad.variety}\n'
-    'Min Price: ₹${ad.minPriceApprox}\n'
-    'Total Cost: ₹${ad.totalCostApprox}\n'
-    'Location: ${ad.location.join(', ')}',
-  ),
+            'Variety: ${ad.variety}\n'
+            'Min Price: ₹${ad.minPriceApprox}\n'
+            'Total Cost: ₹${ad.totalCostApprox}\n'
+            'Location: ${ad.location.join(', ')}',
+          ),
         );
       },
     );
