@@ -11,6 +11,62 @@ import 'package:jan_x/wish_karo_screen/widgets/wish_karo_my_orders_taped_screen.
 import 'package:jan_x/wish_karo_screen/widgets/wish_karo_order_ready_screen.dart';
 import 'package:jan_x/wish_karo_screen/widgets/wish_karo_submitted.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
+import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:jan_x/services/wishkaro_service.dart';
+import 'package:jan_x/model/wishkaro_models.dart';
+
+class WishKaroSubmittedList extends StatefulWidget {
+  const WishKaroSubmittedList({super.key});
+
+  @override
+  State<WishKaroSubmittedList> createState() => _WishKaroSubmittedListState();
+}
+
+class _WishKaroSubmittedListState extends State<WishKaroSubmittedList> {
+  final WishkaroService wishkaroService = Get.find<WishkaroService>();
+  final box = GetStorage();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final token = box.read('token');
+      if (token != null) wishkaroService.getWishlist(token);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      if (wishkaroService.isLoading.value) {
+        return Center(child: CircularProgressIndicator());
+      }
+      if (wishkaroService.error.value.isNotEmpty) {
+        return Center(child: Text('Error: ' + wishkaroService.error.value));
+      }
+      if (wishkaroService.wishlist.isEmpty) {
+        return Center(child: Text('No wishes found.'));
+      }
+      return ListView.builder(
+        shrinkWrap: true,
+        itemCount: wishkaroService.wishlist.length,
+        itemBuilder: (context, index) {
+          final wish = wishkaroService.wishlist[index];
+          return ListTile(
+            title: Text(wish.variety ?? 'No Title'),
+            subtitle: Text(
+              'Crop: \\${wish.cropType}\n'
+              'Variety: \\${wish.variety}\n'
+              'Quantity: \\${wish.quantity}\n'
+              'Location: \\${wish.location?.join(", ") ?? "-"}',
+            ),
+          );
+        },
+      );
+    });
+  }
+}
 
 class WishKaroScreen extends StatefulWidget {
   WishKaroScreen({super.key, this.selectedTab = SelectedTab.defaults});
@@ -165,7 +221,7 @@ class _WishKaroScreenState extends State<WishKaroScreen> {
   Widget _selectedTabContent() {
     switch (widget.selectedTab) {
       case SelectedTab.newSale:
-        return const WishKaroSubmitedScreen();
+        return const WishKaroSubmittedList();
       case SelectedTab.myAds:
         return const WishKaroOrderReadyScreen();
       case SelectedTab.completed:
@@ -234,7 +290,6 @@ class _WishKaroScreenState extends State<WishKaroScreen> {
                     );
                   },
                 );
-             
               },
               child: Image.asset('assets/settings.png'),
             ),
@@ -287,7 +342,6 @@ class _WishKaroScreenState extends State<WishKaroScreen> {
               fontWeight: FontWeight.w700,
               fontSize: 18.px,
               color: Colors.black,
-            
             ),
           ),
         ),

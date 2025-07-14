@@ -5,7 +5,8 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:jan_x/post_buy_ads/post_by_ad_screen.dart';
-import 'package:jan_x/post_buy_ads/tap_on_post_buy/widgets/completed_screen_widget.dart';
+import 'package:jan_x/post_buy_ads/tap_on_post_buy/widgets/completed_screen_widget.dart'
+    hide CompletedContentPostBuy;
 import 'package:jan_x/post_buy_ads/tap_on_post_buy/widgets/my_add_post_buy_widget.dart';
 import 'package:jan_x/published_add/published_buy_screen.dart';
 import 'package:jan_x/report_screen/report_screen.dart';
@@ -1231,8 +1232,7 @@ class _MyAdonTapScreenPostBuyState extends State<MyAdonTapScreenPostBuy> {
                 child: TextButton.icon(
                   onPressed: () {
                     // Delete button action
-                                        showCustomDialogProfile(context);
-
+                    showCustomDialogProfile(context);
                   },
                   icon: const Icon(Icons.delete, color: Colors.white),
                   label: const Text(

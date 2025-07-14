@@ -1,19 +1,33 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
+import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:jan_x/services/kyc_service.dart';
 
 import '../../../../../utilz/colors.dart';
 
-class SamagraScreen extends StatelessWidget {
+class SamagraScreen extends StatefulWidget {
   const SamagraScreen({super.key});
+
+  @override
+  State<SamagraScreen> createState() => _SamagraScreenState();
+}
+
+class _SamagraScreenState extends State<SamagraScreen> {
+  final TextEditingController samagraIdController = TextEditingController();
+
+  @override
+  void dispose() {
+    samagraIdController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar:  AppBar(
+      appBar: AppBar(
         leading: IconButton(
           onPressed: () {
             Navigator.pop(context);
@@ -32,7 +46,7 @@ class SamagraScreen extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body:  Padding(
+      body: Padding(
         padding: EdgeInsets.symmetric(horizontal: Adaptive.w(2)),
         child: Column(
           children: [
@@ -67,11 +81,15 @@ class SamagraScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildText(
-                    title: "Samagra ID Number",
-                    color: const Color(0xff444444),
+                  Expanded(
+                    child: TextField(
+                      controller: samagraIdController,
+                      decoration: InputDecoration(
+                        hintText: 'Samagra ID Number',
+                        border: InputBorder.none,
+                      ),
+                    ),
                   ),
-                  const Spacer(),
                   Image.asset('assets/kycTile1.png', scale: 0.9)
                 ],
               ),
@@ -112,12 +130,16 @@ class SamagraScreen extends StatelessWidget {
             //     color: white,
             //     fontWeight: FontWeight.w600),
             buildVSpacer(6.h),
+            ElevatedButton(
+              onPressed: () => _submitSamagraKyc(context),
+              child: Text('Submit'),
+            ),
           ],
         ),
       ),
     );
   }
-  
+
   Widget _buildText(
       {required String title,
       double? size,
@@ -133,7 +155,7 @@ class SamagraScreen extends StatelessWidget {
           color: color ?? Colors.black),
     );
   }
-  
+
   void showFixedHeightBottomSheet(BuildContext context, double height) {
     showModalBottomSheet(
       context: context,
@@ -218,5 +240,30 @@ class SamagraScreen extends StatelessWidget {
       ),
       isScrollControlled: true, // Allows manual height control
     );
+  }
+
+  void _submitSamagraKyc(BuildContext context) async {
+    final box = GetStorage();
+    final token = box.read('token');
+    if (token == null) return;
+    final kycService = Get.find<KycService>();
+
+    final data = {
+      'samagra_id': samagraIdController.text,
+      // Add other fields as needed
+    };
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => Center(child: CircularProgressIndicator()));
+    final response = await kycService.addSamagraDetails(data, );
+    Navigator.pop(context);
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Samagra KYC submitted successfully.')));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to submit Samagra KYC.')));
+    }
   }
 }

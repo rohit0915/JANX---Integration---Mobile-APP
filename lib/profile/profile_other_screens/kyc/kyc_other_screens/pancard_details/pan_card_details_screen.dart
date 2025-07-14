@@ -4,9 +4,26 @@ import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
+import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:jan_x/services/kyc_service.dart';
 
-class PanCardDetailsScreen extends StatelessWidget {
+class PanCardDetailsScreen extends StatefulWidget {
   const PanCardDetailsScreen({super.key});
+
+  @override
+  State<PanCardDetailsScreen> createState() => _PanCardDetailsScreenState();
+}
+
+class _PanCardDetailsScreenState extends State<PanCardDetailsScreen> {
+  final TextEditingController panController = TextEditingController();
+  final controller = Get.find<KycService>();
+
+  @override
+  void dispose() {
+    panController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,11 +81,15 @@ class PanCardDetailsScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildText(
-                    title: "PAN Card Number",
-                    color: const Color(0xff444444),
+                  Expanded(
+                    child: TextField(
+                      controller: panController,
+                      decoration: InputDecoration(
+                        hintText: 'PAN Card Number',
+                        border: InputBorder.none,
+                      ),
+                    ),
                   ),
-                  const Spacer(),
                   Image.asset('assets/kycTile1.png', scale: 0.9)
                 ],
               ),
@@ -119,12 +140,7 @@ class PanCardDetailsScreen extends StatelessWidget {
         child: CustomButton(
           text: "Save Details",
           onPressed: () {
-            // Navigator.push(
-            //     context,
-            //     MaterialPageRoute(
-            //       builder: (context) => const OtpAadharCardScreen(),
-            //     ));
-            Navigator.pop(context);
+           controller.addPanCard({'document_url': panController.text});
           },
         ),
       ),

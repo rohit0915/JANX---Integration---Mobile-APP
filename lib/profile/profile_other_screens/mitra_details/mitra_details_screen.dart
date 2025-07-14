@@ -6,9 +6,34 @@ import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
+import 'package:get/get.dart';
+import 'package:jan_x/services/mitra_service.dart';
 
-class MitraDetailsScreen extends StatelessWidget {
+class MitraDetailsScreen extends StatefulWidget {
   const MitraDetailsScreen({super.key});
+
+  @override
+  State<MitraDetailsScreen> createState() => _MitraDetailsScreenState();
+}
+
+class _MitraDetailsScreenState extends State<MitraDetailsScreen> {
+  final TextEditingController mitraIdController = TextEditingController();
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController mobileController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController addressController = TextEditingController();
+  bool isLoading = false;
+  final MitraService mitraService = Get.find<MitraService>();
+
+  @override
+  void dispose() {
+    mitraIdController.dispose();
+    nameController.dispose();
+    mobileController.dispose();
+    emailController.dispose();
+    addressController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,25 +72,70 @@ class MitraDetailsScreen extends StatelessWidget {
             buildVSpacer(2.h),
             _MitraDetailsFormWidget(
               hintText: "Mitra Id",
+              controller: mitraIdController,
               suffix: const Icon(
                 Icons.arrow_drop_down,
                 color: white,
               ),
             ),
             buildVSpacer(2.h),
-            _MitraDetailsFormWidget(hintText: "Name"),
+            _MitraDetailsFormWidget(
+                hintText: "Name", controller: nameController),
             buildVSpacer(2.h),
-            _MitraDetailsFormWidget(hintText: "Mobile Number"),
+            _MitraDetailsFormWidget(
+                hintText: "Mobile Number", controller: mobileController),
             buildVSpacer(2.h),
-            _MitraDetailsFormWidget(hintText: "Email Id"),
+            _MitraDetailsFormWidget(
+                hintText: "Email Id", controller: emailController),
             buildVSpacer(2.h),
-            _MitraDetailsFormWidget(hintText: "Address"),
+            _MitraDetailsFormWidget(
+                hintText: "Address", controller: addressController),
             buildVSpacer(8.h),
-            CustomButton(
-                text: "Save",
-                onPressed: () {
-                  showCustomDialogProfile(context);
-                })
+            isLoading
+                ? CircularProgressIndicator()
+                : CustomButton(
+                    text: "Save",
+                    onPressed: () async {
+                      if (mitraIdController.text.isEmpty ||
+                          nameController.text.isEmpty ||
+                          mobileController.text.isEmpty ||
+                          emailController.text.isEmpty ||
+                          addressController.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Please fill all fields.')),
+                        );
+                        return;
+                      }
+                      setState(() => isLoading = true);
+                      final data = {
+                        'mitra_id': mitraIdController.text,
+                        'name': nameController.text,
+                        'mobile': mobileController.text,
+                        'email': emailController.text,
+                        'address': addressController.text,
+                      };
+                      try {
+                        final response =
+                            await mitraService.createMitraProfile(data);
+                        print('Create Mitra Profile API response: ' +
+                            response.body);
+                        setState(() => isLoading = false);
+                        if (response.statusCode == 200 ||
+                            response.statusCode == 201) {
+                          showCustomDialogProfile(context);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text('Failed to create profile.')),
+                          );
+                        }
+                      } catch (e) {
+                        setState(() => isLoading = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error: ' + e.toString())),
+                        );
+                      }
+                    }),
           ],
         ),
       ),
@@ -75,12 +145,11 @@ class MitraDetailsScreen extends StatelessWidget {
   Future<void> showCustomDialogProfile(BuildContext context) async {
     return showDialog<void>(
       context: context,
-      barrierDismissible:
-          false, // Set to true if you want to dismiss the dialog by tapping outside
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
           surfaceTintColor: white,
-          contentPadding: const EdgeInsets.all(0), // Remove default padding
+          contentPadding: const EdgeInsets.all(0),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15.0),
           ),
@@ -152,14 +221,7 @@ class MitraDetailsScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                  )
-                  // IconButton(
-                  //   icon: Icon(Icons.close),
-                  //   onPressed: () {
-                  //     Navigator.of(context).pop(false); // Close dialog with No action
-                  //   },
-                  // ),
-                  ),
+                  )),
             ],
           ),
         );
@@ -174,25 +236,26 @@ class MitraDetailsScreen extends StatelessWidget {
       Color? color}) {
     return Text(
       title,
-      //  textAlign: TextAlign.start,
       style: GoogleFonts.lato(
           fontSize: size ?? 14,
           fontWeight: fontWeight ?? FontWeight.w400,
-          // fontFamily: 'Poppins',
           color: color ?? Colors.black),
     );
   }
 }
 
 class _MitraDetailsFormWidget extends StatelessWidget {
-  _MitraDetailsFormWidget({super.key, required this.hintText, this.suffix});
-  final hintText;
-  Widget? suffix;
+  _MitraDetailsFormWidget(
+      {super.key, required this.hintText, this.suffix, this.controller});
+  final String hintText;
+  final Widget? suffix;
+  final TextEditingController? controller;
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: Adaptive.h(6),
       child: TextField(
+        controller: controller,
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: GoogleFonts.lato(

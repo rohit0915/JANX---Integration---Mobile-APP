@@ -5,6 +5,8 @@ import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class MitraRegistractionScreen extends StatefulWidget {
   const MitraRegistractionScreen({super.key});
@@ -17,6 +19,18 @@ class MitraRegistractionScreen extends StatefulWidget {
 class _MitraRegistractionScreenState extends State<MitraRegistractionScreen> {
   bool isClicked1 = false;
   bool isClicked2 = false;
+  File? _selectedImage;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _selectedImage = File(pickedFile.path);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -125,25 +139,30 @@ class _MitraRegistractionScreenState extends State<MitraRegistractionScreen> {
                     fontWeight: FontWeight.w800),
               ),
               buildVSpacer(1.h),
-              Container(
-                height: Adaptive.h(12),
-                width: Adaptive.w(100),
-                decoration: BoxDecoration(
-                  border: Border.all(color: white),
-                  borderRadius: BorderRadius.circular(14.sp),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Image.asset('assets/mitra_Regi2.png'),
-                    buildVSpacer(2.h),
-                    _buildText(
-                        title: "Upload Images Only in JPG and PNG",
-                        size: 8.px,
-                        fontWeight: FontWeight.w500,
-                        color: white)
-                  ],
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  height: Adaptive.h(12),
+                  width: Adaptive.w(100),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: white),
+                    borderRadius: BorderRadius.circular(14.sp),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _selectedImage != null
+                          ? Image.file(_selectedImage!, height: 60)
+                          : Image.asset('assets/mitra_Regi2.png'),
+                      buildVSpacer(2.h),
+                      _buildText(
+                          title: "Upload Images Only in JPG and PNG",
+                          size: 8.px,
+                          fontWeight: FontWeight.w500,
+                          color: white)
+                    ],
+                  ),
                 ),
               ),
               buildVSpacer(3.h),
@@ -172,7 +191,8 @@ class _MitraRegistractionScreenState extends State<MitraRegistractionScreen> {
                       title:
                           "I agree to receive important update by smd,email,\nWhatsApp or other services",
                       size: 12.px,
-                      fontWeight: FontWeight.w500,color: white)
+                      fontWeight: FontWeight.w500,
+                      color: white)
                 ],
               ),
               Row(
@@ -197,17 +217,24 @@ class _MitraRegistractionScreenState extends State<MitraRegistractionScreen> {
                   ),
                   buildHSpacer(4.w),
                   _buildText(
-                      title:
-                          "I agree to terms & Conditions and Privacy Policy",
+                      title: "I agree to terms & Conditions and Privacy Policy",
                       size: 12.px,
-                      fontWeight: FontWeight.w500,color: white)
+                      fontWeight: FontWeight.w500,
+                      color: white)
                 ],
               ),
               buildVSpacer(3.h),
-              CustomButton(text: "Submit Application", onPressed: (){
-                Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => MitraSubscriptionScreen(),));
-              },
-              size: 19.px,weight: FontWeight.w400,
+              CustomButton(
+                text: "Submit Application",
+                onPressed: () {
+                  Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => MitraSubscriptionScreen(),
+                      ));
+                },
+                size: 19.px,
+                weight: FontWeight.w400,
               ),
               buildVSpacer(3.h)
             ],

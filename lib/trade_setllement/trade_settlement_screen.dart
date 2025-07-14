@@ -6,6 +6,9 @@ import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
+import 'package:get/get.dart';
+import 'package:jan_x/services/trade_settlement_service.dart';
+import 'package:jan_x/model/trade_settlement_models.dart';
 
 class TradeSettlementScreen extends StatefulWidget {
   const TradeSettlementScreen({super.key});
@@ -76,27 +79,70 @@ class _TradeSettlementScreenState extends State<TradeSettlementScreen> {
   }
 
   Widget pendingSettlement() {
-    return Column(
-      children: [
-        buildVSpacer(3.h),
-        TradeSettlementWidgets(),
-        buildVSpacer(3.h),
-        TradeSettlementWidgets(),
-        buildVSpacer(3.h),
-        TradeSettlementWidgets(),
-        buildVSpacer(3.h),
-      ],
-    );
+    final TradeSettlementService tradeSettlementService =
+        Get.find<TradeSettlementService>();
+    // Fetch settlements on first build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      tradeSettlementService.getTradeSettlement();
+    });
+    return Obx(() {
+      if (tradeSettlementService.isLoading.value) {
+        return Center(child: CircularProgressIndicator());
+      }
+      if (tradeSettlementService.error.value.isNotEmpty) {
+        return Center(
+            child: Text('Error: ' + tradeSettlementService.error.value));
+      }
+      if (tradeSettlementService.settlements.isEmpty) {
+        return Center(child: Text('No settlements found.'));
+      }
+      return ListView.builder(
+        shrinkWrap: true,
+        physics: NeverScrollableScrollPhysics(),
+        itemCount: tradeSettlementService.settlements.length,
+        itemBuilder: (context, index) {
+          final settlement = tradeSettlementService.settlements[index];
+          return Card(
+            child: ListTile(
+              title: Text('Settlement'),
+              subtitle: Text('Details: ...'), // Add real fields as needed
+            ),
+          );
+        },
+      );
+    });
   }
 
   Widget completedSettlement() {
-    return Column(
-      children: [
-        buildVSpacer(3.h),
-        TradeSettlementCompletedWidgets(),
-        buildVSpacer(3.h),
-      ],
-    );
+    // For demo, use the same observable. In real use, filter for completed.
+    final TradeSettlementService tradeSettlementService =
+        Get.find<TradeSettlementService>();
+    return Obx(() {
+      if (tradeSettlementService.isLoading.value) {
+        return Center(child: CircularProgressIndicator());
+      }
+      if (tradeSettlementService.error.value.isNotEmpty) {
+        return Center(
+            child: Text('Error: ' + tradeSettlementService.error.value));
+      }
+      if (tradeSettlementService.settlements.isEmpty) {
+        return Center(child: Text('No settlements found.'));
+      }
+      return ListView.builder(
+        shrinkWrap: true,
+        physics: NeverScrollableScrollPhysics(),
+        itemCount: tradeSettlementService.settlements.length,
+        itemBuilder: (context, index) {
+          final settlement = tradeSettlementService.settlements[index];
+          return Card(
+            child: ListTile(
+              title: Text('Settlement (Completed)'),
+              subtitle: Text('Details: ...'), // Add real fields as needed
+            ),
+          );
+        },
+      );
+    });
   }
 
   Widget _buildText1(

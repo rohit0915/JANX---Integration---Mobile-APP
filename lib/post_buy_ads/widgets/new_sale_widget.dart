@@ -7,6 +7,9 @@ import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
+import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:jan_x/services/post_buy_ad_service.dart';
 
 class NewSaleRequestWidget extends StatefulWidget {
   const NewSaleRequestWidget({super.key});
@@ -15,12 +18,95 @@ class NewSaleRequestWidget extends StatefulWidget {
   State<NewSaleRequestWidget> createState() => _NewSaleRequestWidgetState();
 }
 
-List<String> cropTypes = ['Wheat', 'Paddy', 'Moong'];
-
 class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
-  void _handleDropdownChange(String? newValue) {
+  String? selectedCropId;
+  String? selectedVarietyId;
+  List<Map<String, String>> cropTypes = [];
+  List<Map<String, String>> varietyTypes = [];
+  bool isVarietyLoading = false;
+  bool isLoading = false;
+  String? error;
+  final PostBuyAdService postBuyAdService = Get.find<PostBuyAdService>();
+  final box = GetStorage();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCropTypes();
+  }
+
+  Future<void> _fetchCropTypes() async {
     setState(() {
-      selectedCrop = newValue;
+      isLoading = true;
+      error = null;
+    });
+    try {
+      final types = await postBuyAdService.fetchCropTypes();
+      setState(() {
+        cropTypes = types;
+      });
+    } catch (e) {
+      setState(() {
+        error = 'Error loading crops.';
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _fetchVarietiesForCrop(String cropId) async {
+    setState(() {
+      isVarietyLoading = true;
+      error = null;
+      varietyTypes = [];
+      selectedVarietyId = null;
+    });
+    try {
+      final varieties = await postBuyAdService.fetchVarietiesForCrop(cropId);
+      setState(() {
+        varietyTypes = varieties;
+      });
+    } catch (e) {
+      setState(() {
+        error = 'Error loading varieties.';
+      });
+    } finally {
+      setState(() {
+        isVarietyLoading = false;
+      });
+    }
+  }
+
+  void _handleCropChange(String? val) {
+    setState(() => selectedCropId = val);
+    if (val != null) _fetchVarietiesForCrop(val);
+    selectedVarietyId = null;
+  }
+
+  void _handleVarietyChange(String? val) {
+    setState(() => selectedVarietyId = val);
+  }
+
+  Future<void> _submitBuyAd() async {
+    if ((selectedCropId == null || selectedCropId!.isEmpty) ||
+        (selectedVarietyId == null || selectedVarietyId!.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Please select both Crop Type and Variety.')));
+      return;
+    }
+    setState(() {
+      isLoading = true;
+    });
+    await postBuyAdService.createBuyAdPost(
+      context: context,
+      selectedCropId: selectedCropId,
+      selectedVarietyId: selectedVarietyId,
+      // Add other required fields here
+    );
+    setState(() {
+      isLoading = false;
     });
   }
 
@@ -40,10 +126,28 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
                   size: 16),
               buildVSpacer(20),
               _buildText(title: "Type of Crop", color: const Color(0xffF4BC1C)),
-              buildCustomTextFieldWithDropdown(),
+              _buildDropdown(
+                value: selectedCropId,
+                items: cropTypes,
+                onChanged: _handleCropChange,
+                hint: 'Select Crop',
+                getLabel: (item) => item['name']!,
+                getValue: (item) => item['id']!,
+              ),
               buildVSpacer(20),
               _buildText(title: "Variety", color: const Color(0xffF4BC1C)),
-              buildCustomTextFieldWithDropdown(),
+              isVarietyLoading
+                  ? Center(child: CircularProgressIndicator())
+                  : error != null
+                      ? Text(error!, style: TextStyle(color: Colors.red))
+                      : _buildDropdown(
+                          value: selectedVarietyId,
+                          items: varietyTypes,
+                          onChanged: _handleVarietyChange,
+                          hint: 'Select Variety',
+                          getLabel: (item) => item['name']!,
+                          getValue: (item) => item['id']!,
+                        ),
               buildVSpacer(20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -473,6 +577,45 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
     );
   }
 
+  Widget _buildDropdown({
+    required String? value,
+    required List<Map<String, String>> items,
+    required void Function(String?) onChanged,
+    required String Function(Map<String, String>) getLabel,
+    required String Function(Map<String, String>) getValue,
+    String? hint,
+  }) {
+    return Container(
+      height: 6.h,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        border: Border.all(color: const Color(0xffF4BC1C), width: 2.0),
+        borderRadius: BorderRadius.circular(5.0),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: (value != null && value.isNotEmpty) ? value : null,
+          isExpanded: true,
+          icon: const Icon(Icons.arrow_drop_down),
+          iconSize: 24,
+          elevation: 16,
+          style: const TextStyle(color: Colors.black),
+          onChanged: onChanged,
+          hint: hint != null
+              ? Text(hint, style: TextStyle(color: Colors.grey))
+              : null,
+          items: items.map<DropdownMenuItem<String>>((item) {
+            return DropdownMenuItem<String>(
+              value: getValue(item),
+              child: Text(getLabel(item)),
+            );
+          }).toList(),
+          dropdownColor: const Color(0xffF4BC1C),
+        ),
+      ),
+    );
+  }
+
   String? selectedCrop;
 
   Widget _newSaleContent() {
@@ -486,10 +629,24 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
             size: 16),
         buildVSpacer(20),
         _buildText(title: "Type of Crop", color: const Color(0xffF4BC1C)),
-        buildCustomTextFieldWithDropdown(),
+        _buildDropdown(
+          value: selectedCropId,
+          items: cropTypes,
+          onChanged: _handleCropChange,
+          hint: 'Select Crop',
+          getLabel: (item) => item['name']!,
+          getValue: (item) => item['id']!,
+        ),
         buildVSpacer(20),
         _buildText(title: "Variety", color: const Color(0xffF4BC1C)),
-        buildCustomTextFieldWithDropdown(),
+        _buildDropdown(
+          value: selectedVarietyId,
+          items: varietyTypes,
+          onChanged: _handleVarietyChange,
+          hint: 'Select Variety',
+          getLabel: (item) => item['name']!,
+          getValue: (item) => item['id']!,
+        ),
         buildVSpacer(20),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -839,37 +996,6 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
         ),
         buildVSpacer(18.h)
       ],
-    );
-  }
-
-  Widget buildCustomTextFieldWithDropdown() {
-    return Container(
-      height: 6.h,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-      decoration: BoxDecoration(
-        border: Border.all(
-            color: const Color(0xffF4BC1C),
-            width: 2.0), // Yellow border around the container
-        borderRadius: BorderRadius.circular(5.0), // Rounded corners
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: selectedCrop,
-          isExpanded: true, // Makes the dropdown expand to fill the container
-          icon: const Icon(Icons.arrow_drop_down),
-          iconSize: 24,
-          elevation: 16,
-          style: const TextStyle(color: Colors.black), // Text color
-          onChanged: _handleDropdownChange,
-          items: cropTypes.map<DropdownMenuItem<String>>((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
-          dropdownColor: const Color(0xffF4BC1C),
-        ),
-      ),
     );
   }
 }

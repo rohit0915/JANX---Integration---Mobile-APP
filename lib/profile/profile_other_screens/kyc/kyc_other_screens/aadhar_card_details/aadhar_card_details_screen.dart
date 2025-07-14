@@ -1,13 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:jan_x/model/kyc_models.dart';
 import 'package:jan_x/profile/profile_other_screens/kyc/kyc_other_screens/aadhar_card_details/aadhar_card_otp_screen.dart';
 import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
+import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:jan_x/services/kyc_service.dart';
+import 'dart:convert'; // Added for jsonDecode
 
-class AadharCardDetailsScreen extends StatelessWidget {
+class AadharCardDetailsScreen extends StatefulWidget {
   const AadharCardDetailsScreen({super.key});
+
+  @override
+  State<AadharCardDetailsScreen> createState() =>
+      _AadharCardDetailsScreenState();
+}
+
+class _AadharCardDetailsScreenState extends State<AadharCardDetailsScreen> {
+  final TextEditingController aadhaarController = TextEditingController();
+
+  @override
+  void dispose() {
+    aadhaarController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,11 +83,15 @@ class AadharCardDetailsScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildText(
-                    title: "Aadhar Card Number",
-                    color: const Color(0xff444444),
+                  Expanded(
+                    child: TextField(
+                      controller: aadhaarController,
+                      decoration: InputDecoration(
+                        hintText: 'Aadhar Card Number',
+                        border: InputBorder.none,
+                      ),
+                    ),
                   ),
-                  const Spacer(),
                   Image.asset('assets/kycTile1.png', scale: 0.9)
                 ],
               ),
@@ -84,11 +107,7 @@ class AadharCardDetailsScreen extends StatelessWidget {
             CustomButton(
               text: "Next",
               onPressed: () {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const OtpAadharCardScreen(),
-                    ));
+                _submitAadhaarKyc(context);
               },
             )
           ],
@@ -111,5 +130,43 @@ class AadharCardDetailsScreen extends StatelessWidget {
           // fontFamily: 'Poppins',
           color: color ?? Colors.black),
     );
+  }
+
+  void _submitAadhaarKyc(BuildContext context) async {
+    final box = GetStorage();
+    final token = box.read('token');
+    if (token == null) return;
+    final kycService = Get.find<KycService>();
+
+    final data = {
+      'aadhaar_number': aadhaarController.text,
+    };
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => Center(child: CircularProgressIndicator()));
+    final response = await kycService.aadharRequest(
+      data,
+    );
+    Navigator.pop(context);
+    if (response.statusCode == 200) {
+      try {
+        final responseData = jsonDecode(response.body);
+        final otp = responseData['data'] ?? responseData['data']?['otp'];
+        if (otp != null) {
+          print('Aadhaar OTP: ' + otp.toString());
+        } else {
+          print('Aadhaar OTP not found in response.');
+        }
+      } catch (e) {
+        print('Error parsing OTP from response: ' + e.toString());
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Aadhaar KYC submitted successfully.')));
+      Get.back();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to submit Aadhaar KYC.')));
+    }
   }
 }

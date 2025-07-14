@@ -19,6 +19,10 @@ import 'package:jan_x/wallet/wallet_screen.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
+import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:jan_x/services/kyc_service.dart';
+import 'dart:convert';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -368,13 +372,42 @@ class ProfileScreen extends StatelessWidget {
                           size: 12.px),
                     ),
                     InkWell(
-                      onTap: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const MitraREgistractionScreen(),
-                            ));
+                      onTap: () async {
+                        final box = GetStorage();
+                        final token = box.read('token');
+                        if (token != null) {
+                          final response =
+                              await Get.find<KycService>().getKycProfile();
+                          if (response.statusCode == 200) {
+                            final data = jsonDecode(response.body);
+                          
+                            final isKycDone = data['kyc_completed'] == true ||
+                                data['kyc_completed'] == 1;
+                            if (isKycDone) {
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const MitraREgistractionScreen(),
+                                  ));
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text(
+                                        'Please complete your KYC before Mitra Registration.')),
+                              );
+                            }
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text('Failed to check KYC status.')),
+                            );
+                          }
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('User not logged in.')),
+                          );
+                        }
                       },
                       child: listTileMethod(
                           index: "10",
@@ -480,8 +513,7 @@ class ProfileScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [_buildText(title: "App Version 2.1.0", color: white)],
             ),
-                        buildVSpacer(3.h),
-
+            buildVSpacer(3.h),
           ],
         ),
       ),

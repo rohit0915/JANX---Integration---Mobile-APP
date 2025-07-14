@@ -5,12 +5,20 @@ import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
+import 'package:get/get.dart';
+import 'package:jan_x/services/mitra_service.dart';
+import 'package:jan_x/model/mitra_models.dart';
 
 class MitraProfileDetailsScreen extends StatelessWidget {
   const MitraProfileDetailsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final MitraService mitraService = Get.find<MitraService>();
+    // Fetch mitra profile on first build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      mitraService.getMitraProfile();
+    });
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -24,52 +32,65 @@ class MitraProfileDetailsScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(
-            horizontal: Adaptive.w(3), vertical: Adaptive.h(2)),
-        child: Column(
-          children: [
-            Center(
-                child: _buildText(
-                    title: "Your Mitra Profile",
-                    size: 18.px,
-                    fontWeight: FontWeight.w700,
-                    color: white)),
-            buildVSpacer(2.h),
-            Image.asset('assets/mitradetails.png'),
-            buildVSpacer(1.h),
-            _buildText(
-                title: "Your mitra photo",
-                size: 10.px,
-                fontWeight: FontWeight.w400,
-                color: white),
-            buildVSpacer(2.h),
-            mitraProfileMethod(title: "000023"),
-            buildVSpacer(2.h),
-            mitraProfileMethod(title: "Ramlal Singh"),
-            buildVSpacer(2.h),
-            mitraProfileMethod(title: "+91 123456789"),
-            buildVSpacer(2.h),
-            mitraProfileMethod(title: "abcd@gmail.com"),
-            buildVSpacer(2.h),
-            mitraProfileMethod(title: "Address : Gujrath"),
-            buildVSpacer(10.h),
-            CustomButton(
-              text: "Edit",
-              onPressed: () {
-                _showCustomDialogProfile(context);
-              },
-            ),
-            buildVSpacer(2.h),
-            CustomButton(
-              text: "Back",
-              onPressed: () {
-                Navigator.pop(context);
-              },
-            )
-          ],
-        ),
-      ),
+      body: Obx(() {
+        if (mitraService.isLoading.value) {
+          return Center(child: CircularProgressIndicator());
+        }
+        if (mitraService.error.value.isNotEmpty) {
+          return Center(child: Text('Error: ' + mitraService.error.value));
+        }
+        if (mitraService.mitraProfiles.isEmpty) {
+          return Center(child: Text('No mitra profile found.'));
+        }
+  
+        final profile = mitraService.mitraProfiles.first;
+        return Padding(
+          padding: EdgeInsets.symmetric(
+              horizontal: Adaptive.w(3), vertical: Adaptive.h(2)),
+          child: Column(
+            children: [
+              Center(
+                  child: _buildText(
+                      title: "Your Mitra Profile",
+                      size: 18.px,
+                      fontWeight: FontWeight.w700,
+                      color: white)),
+              buildVSpacer(2.h),
+              Image.asset('assets/mitradetails.png'),
+              buildVSpacer(1.h),
+              _buildText(
+                  title: "Your mitra photo",
+                  size: 10.px,
+                  fontWeight: FontWeight.w400,
+                  color: white),
+              buildVSpacer(2.h),
+              mitraProfileMethod(title: "Mitra ID: ..."),
+              buildVSpacer(2.h),
+              mitraProfileMethod(title: "Name: ..."),
+              buildVSpacer(2.h),
+              mitraProfileMethod(title: "Mobile: ..."),
+              buildVSpacer(2.h),
+              mitraProfileMethod(title: "Email: ..."),
+              buildVSpacer(2.h),
+              mitraProfileMethod(title: "Address: ..."),
+              buildVSpacer(10.h),
+              CustomButton(
+                text: "Edit",
+                onPressed: () {
+                  _showCustomDialogProfile(context);
+                },
+              ),
+              buildVSpacer(2.h),
+              CustomButton(
+                text: "Back",
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+              )
+            ],
+          ),
+        );
+      }),
     );
   }
 
@@ -95,7 +116,7 @@ class MitraProfileDetailsScreen extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     buildVSpacer(5.h),
-                     Text(
+                    Text(
                       "Please Connect to customer care\nfor the any changes in mitra",
                       style: GoogleFonts.lato(
                           fontSize: 16.px,

@@ -14,6 +14,9 @@ import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
 import 'package:jan_x/wish_karo_screen/new_wish_karo_screen.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
+import 'package:get/get.dart';
+import 'package:jan_x/services/sale_ad_service.dart';
+import 'package:jan_x/model/sell_ad_models.dart';
 
 class SaleAddScreen extends StatefulWidget {
   SaleAddScreen({super.key});
@@ -283,200 +286,37 @@ class _SaleAddScreenState extends State<SaleAddScreen> {
   }
 
   sellerAddMethod() {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildText(
-                  title: "Sellers Ad’s ( I want to buy )",
-                  size: 14.px,
-                  fontWeight: FontWeight.w700,
-                  color: white),
-              Text(
-                'See All',
-                style: GoogleFonts.lato(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14.px,
-                    decoration: TextDecoration.underline,
-                    color: white,
-                    decorationColor: white),
-              )
-            ],
-          ),
-          buildVSpacer(2.h),
-          saleProducMethod(),
-          buildVSpacer(2.h),
-          saleProducMethod(),
-          buildVSpacer(2.h),
-          saleProducMethod()
-        ],
-      ),
-    );
-  }
-
-  Widget saleProducMethod() {
-    return Padding(
-      padding: const EdgeInsets.all(10),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) =>
-                      const ProductOrderDetailsScreen(isFromTrade: false),
-                ),
-              );
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12),
-                child: Column(
-                  children: [
-                    buildVSpacer(20),
-                    Row(
-                      children: [
-                        Image.asset("assets/pro.png"),
-                        buildHSpacer(20),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            _buildText(title: "Wheat", size: 18),
-                            _buildText(
-                                title: "Variety :  v1,Sharbati", size: 11),
-                            _buildText(title: "Location : Jabalpur", size: 11),
-                          ],
-                        ),
-                        const Spacer(),
-                        CircleAvatar(
-                          radius: Adaptive.w(5),
-                          backgroundColor: const Color(0xffD9D9D9),
-                          child: const Center(
-                            child: Icon(
-                              Icons.favorite,
-                              color: Colors.white,
-                            ),
-                          ),
-                        )
-                      ],
-                    ),
-                    buildVSpacer(10),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        children: [
-                          _buildText(title: "Quantity (approx.)"),
-                          const Spacer(),
-                          _buildText(title: "100 QT"),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      decoration: const BoxDecoration(
-                        color: Color(0xffF4BC1C),
-                      ),
-                      height: 1,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        children: [
-                          _buildText(title: "Min-Price (approx.)"),
-                          const Spacer(),
-                          _buildText(title: "₹ 2,400.00"),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      decoration: const BoxDecoration(
-                        color: Color(0xffF4BC1C),
-                      ),
-                      height: 1,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        children: [
-                          _buildText(title: "Total Cost (approx.)"),
-                          const Spacer(),
-                          _buildText(title: "₹ 2,40,000.00"),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xffF4BC1C),
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: _buildText(
-                            title:
-                                "Description : Turmeric, a plant in the ginger family, is native to South east Asia and is grown commercially in that region.",
-                            size: 11.px),
-                      ),
-                    ),
-                    buildVSpacer(20),
-                  ],
-                ),
-              ),
+    final SaleAdService saleAdService = Get.find<SaleAdService>();
+    // Fetch sale ads on first build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      saleAdService.getSalesAds();
+    });
+    return Obx(() {
+      if (saleAdService.isLoading.value) {
+        return Center(child: CircularProgressIndicator());
+      }
+      if (saleAdService.error.value.isNotEmpty) {
+        return Center(child: Text('Error: ' + saleAdService.error.value));
+      }
+      if (saleAdService.saleAds.isEmpty) {
+        return Center(child: Text('No sale ads found.'));
+      }
+      return ListView.builder(
+        shrinkWrap: true,
+        physics: NeverScrollableScrollPhysics(),
+        itemCount: saleAdService.saleAds.length,
+        itemBuilder: (context, index) {
+          final ad = saleAdService.saleAds[index];
+          return Card(
+            child: ListTile(
+              title: Text(ad.cropType),
+              subtitle: Text(
+                  'Variety: ${ad.variety}\nQuantity: ${ad.approxQuantity ?? '-'}\nLocation: ${ad.location.join(', ')}'),
             ),
-          ),
-          Positioned(
-            top: -18,
-            left: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xff3985D7),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.black26),
-              ),
-              child: Row(
-                children: [
-                  Image.asset(
-                    "assets/check.png",
-                    scale: 0.8,
-                  ),
-                  buildHSpacer(5),
-                  const Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "AD ID: 4545454454",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        "Posted Date : 05-April-24",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+          );
+        },
+      );
+    });
   }
 
   Column defaultMethodInWishKaro() {

@@ -18,6 +18,9 @@ import 'package:get/get.dart';
 import 'package:jan_x/services/post_sell_ad_service.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:jan_x/model/sell_ad_models.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:jan_x/services/mitra_service.dart';
 
 class PostSellAdScreen extends StatefulWidget {
   PostSellAdScreen({super.key, this.selectedTab = SelectedTab.newSale});
@@ -33,16 +36,10 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
   String? selectedCropId;
   String? selectedVarietyId;
   // Example data with IDs (replace with your real data)
-  final List<Map<String, String>> cropTypes = [
-    {'id': '676696c179aadc8eaa30d87f', 'name': 'Wheat'},
-    {'id': '676696c179aadc8eaa30d880', 'name': 'Paddy'},
-    {'id': '676696c179aadc8eaa30d881', 'name': 'Moong'},
-  ];
-  final List<Map<String, String>> varietyTypes = [
-    {'id': '6766971279aadc8eaa30d890', 'name': 'Type 1'},
-    {'id': '6766971279aadc8eaa30d891', 'name': 'Type 2'},
-    {'id': '6766971279aadc8eaa30d892', 'name': 'Type 3'},
-  ];
+  List<Map<String, String>> cropTypes = [];
+  List<Map<String, String>> varietyTypes = [];
+  bool isVarietyLoading = false;
+  String? varietyError;
   String headerTitle = "Seller";
 
   final PostSellAdService postSellAdService = Get.find<PostSellAdService>();
@@ -66,17 +63,68 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
 
   bool isPosting = false;
   String postError = '';
+  bool userIsMitra = false;
 
   @override
   void initState() {
     super.initState();
     _fetchMyAds();
+    _checkMitraStatus();
+    _fetchCropTypes(); // Restore API fetching for crops
   }
 
   void _fetchMyAds() async {
     final token = box.read('token');
     if (token != null) {
       await postSellAdService.getMyAds();
+    }
+  }
+
+  Future<void> _checkMitraStatus() async {
+    try {
+      final mitraService = Get.find<MitraService>();
+      await mitraService.getMitraProfile();
+      setState(() {
+        userIsMitra = mitraService.mitraProfiles.isNotEmpty;
+        if (!userIsMitra) mitraVerification = false;
+      });
+    } catch (_) {
+      setState(() {
+        userIsMitra = false;
+        mitraVerification = false;
+      });
+    }
+  }
+
+  Future<void> _fetchCropTypes() async {
+    try {
+      final types = await postSellAdService.fetchCropTypes();
+      setState(() {
+        cropTypes = types;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _fetchVarietiesForCrop(String cropId) async {
+    setState(() {
+      isVarietyLoading = true;
+      varietyError = null;
+      varietyTypes = [];
+      selectedVarietyId = null;
+    });
+    try {
+      final varieties = await postSellAdService.fetchVarietiesForCrop(cropId);
+      setState(() {
+        varietyTypes = varieties;
+      });
+    } catch (e) {
+      setState(() {
+        varietyError = 'Error loading varieties.';
+      });
+    } finally {
+      setState(() {
+        isVarietyLoading = false;
+      });
     }
   }
 
@@ -198,7 +246,12 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
           child: buildCustomTextFieldWithDropdown(
             value: selectedCropId,
             items: cropTypes,
-            onChanged: (val) => setState(() => selectedCropId = val),
+            onChanged: (val) {
+              setState(() => selectedCropId = val);
+              if (val != null)
+                _fetchVarietiesForCrop(val); // Fetch varieties from API
+              selectedVarietyId = null;
+            },
             hint: 'Select Crop',
             getLabel: (item) => item['name']!,
             getValue: (item) => item['id']!,
@@ -208,14 +261,19 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
         _buildText(title: "Variety", color: const Color(0xffF4BC1C)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12),
-          child: buildCustomTextFieldWithDropdown(
-            value: selectedVarietyId,
-            items: varietyTypes,
-            onChanged: (val) => setState(() => selectedVarietyId = val),
-            hint: 'Select Variety',
-            getLabel: (item) => item['name']!,
-            getValue: (item) => item['id']!,
-          ),
+          child: isVarietyLoading
+              ? Center(child: CircularProgressIndicator())
+              : varietyError != null
+                  ? Text(varietyError!, style: TextStyle(color: Colors.red))
+                  : buildCustomTextFieldWithDropdown(
+                      value: selectedVarietyId,
+                      items: varietyTypes,
+                      onChanged: (val) =>
+                          setState(() => selectedVarietyId = val),
+                      hint: 'Select Variety',
+                      getLabel: (item) => item['name']!,
+                      getValue: (item) => item['id']!,
+                    ),
         ),
         buildVSpacer(20),
         Padding(
@@ -475,13 +533,14 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
                   Row(
                     children: [
                       Checkbox(
-                        value: value,
-                        onChanged: (bool? newValue) {
-                          setState(() {
-                            value = newValue ??
-                                false; // Update the value of the checkbox
-                          });
-                        },
+                        value: mitraVerification && userIsMitra,
+                        onChanged: userIsMitra
+                            ? (bool? newValue) {
+                                setState(() {
+                                  mitraVerification = newValue ?? false;
+                                });
+                              }
+                            : null,
                         activeColor: const Color(0xffF4BC1C),
                       ),
                       Text(
@@ -532,23 +591,15 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
                   ),
                   buildVSpacer(14.h),
                   CustomButton(
-                    text: saveButton == false
-                        ? "Save "
-                        : isPosting
-                            ? "Posting..."
-                            : "Submit",
+                    text: "Submit",
                     onPressed: () async {
-                      final ad = SellAdResponse(
-                        cropType: selectedCropId ?? '',
-                        variety: selectedVarietyId ?? '',
-                        minPriceApprox: 1000,
-                        totalCostApprox: 5000,
-                        location: ['Test Location'],
-                      );
-                      final response = await postSellAdService.createSellAd(ad);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text('Status: ${response.statusCode}')),
+                      await postSellAdService.createSellAdPost(
+                        context: context,
+                        selectedCropId: selectedCropId,
+                        selectedVarietyId: selectedVarietyId,
+                        varietyTypes: varietyTypes,
+                        mitraVerification: mitraVerification,
+                        userIsMitra: userIsMitra,
                       );
                     },
                     width: Adaptive.w(85),
@@ -601,6 +652,37 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
       ),
     );
   }
+
+  Widget _myAdsContent(BuildContext context) {
+    final PostSellAdService postSellAdService = Get.find<PostSellAdService>();
+    return Obx(() {
+      if (postSellAdService.isLoading.value) {
+        return Center(child: CircularProgressIndicator());
+      }
+      if (postSellAdService.error.value.isNotEmpty) {
+        return Center(child: Text('Error: ' + postSellAdService.error.value));
+      }
+      if (postSellAdService.sellAds.isEmpty) {
+        return Center(child: Text('No ads found.'));
+      }
+      return ListView.builder(
+        shrinkWrap: true,
+        itemCount: postSellAdService.sellAds.length,
+        itemBuilder: (context, index) {
+          final ad = postSellAdService.sellAds[index];
+          return ListTile(
+            title: Text(ad.variety ?? 'No Title'),
+            subtitle: Text(
+              'Variety: ${ad.variety}\n'
+              'Min Price: ₹${ad.minPriceApprox}\n'
+              'Total Cost: ₹${ad.totalCostApprox}\n'
+              'Location: ${ad.location.join(', ')}',
+            ),
+          );
+        },
+      );
+    });
+  }
 }
 
 Widget _buildTextHeader(
@@ -650,37 +732,6 @@ Widget _buildText(
 
 enum SelectedTab { newSale, myAds, completed }
 
-Widget _myAdsContent(BuildContext context) {
-  final PostSellAdService postSellAdService = Get.find<PostSellAdService>();
-  return Obx(() {
-    if (postSellAdService.isLoading.value) {
-      return Center(child: CircularProgressIndicator());
-    }
-    if (postSellAdService.error.value.isNotEmpty) {
-      return Center(child: Text('Error: ' + postSellAdService.error.value));
-    }
-    if (postSellAdService.sellAds.isEmpty) {
-      return Center(child: Text('No ads found.'));
-    }
-    return ListView.builder(
-      shrinkWrap: true,
-      itemCount: postSellAdService.sellAds.length,
-      itemBuilder: (context, index) {
-        final ad = postSellAdService.sellAds[index];
-        return ListTile(
-          title: Text(ad.variety ?? 'No Title'),
-          subtitle: Text(
-            'Variety: ${ad.variety}\n'
-            'Min Price: ₹${ad.minPriceApprox}\n'
-            'Total Cost: ₹${ad.totalCostApprox}\n'
-            'Location: ${ad.location.join(', ')}',
-          ),
-        );
-      },
-    );
-  });
-}
-
 class CompletedContent extends StatefulWidget {
   @override
   _CompletedContentState createState() => _CompletedContentState();
@@ -689,393 +740,45 @@ class CompletedContent extends StatefulWidget {
 class _CompletedContentState extends State<CompletedContent> {
   bool isClickedCompleted = false;
 
+  final PostSellAdService postSellAdService = Get.find<PostSellAdService>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      postSellAdService.getMyCompletedAds();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          SizedBox(
-            height: Adaptive.h(3),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(5),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      isClickedCompleted = !isClickedCompleted;
-                    });
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Container(
-                              width: Adaptive.w(30),
-                              height: Adaptive.h(5),
-                              decoration: BoxDecoration(
-                                  color: const Color(0xffF4BC1C),
-                                  borderRadius: BorderRadius.only(
-                                    bottomLeft: Radius.circular(14.sp),
-                                  )),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.star),
-                                  Text(
-                                    'Verified',
-                                    style: GoogleFonts.lato(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 10.px),
-                                  )
-                                ],
-                              ),
-                            )
-                          ],
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Column(
-                            children: [
-                              buildVSpacer(20),
-                              Row(
-                                children: [
-                                  Image.asset("assets/pro.png"),
-                                  buildHSpacer(20),
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    children: [
-                                      _buildText1(title: "Wheat", size: 18),
-                                      _buildText1(
-                                          title: "Variety :  v1,Sharbati",
-                                          size: 11),
-                                      _buildText1(
-                                          title: "Location : Jabalpur",
-                                          size: 11),
-                                    ],
-                                  )
-                                ],
-                              ),
-                              buildVSpacer(10),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  children: [
-                                    _buildText1(title: "Quantity (approx.)"),
-                                    const Spacer(),
-                                    _buildText1(title: "100 QT"),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                decoration: const BoxDecoration(
-                                  color: Color(0xffF4BC1C),
-                                ),
-                                height: 1,
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  children: [
-                                    _buildText1(title: "Min-Price (approx.)"),
-                                    const Spacer(),
-                                    _buildText1(title: "₹ 2,400.00"),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                decoration: const BoxDecoration(
-                                  color: Color(0xffF4BC1C),
-                                ),
-                                height: 1,
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  children: [
-                                    _buildText1(title: "Total Cost (approx.)"),
-                                    const Spacer(),
-                                    _buildText1(title: "₹ 2,40,000.00"),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: const Color(0xffF4BC1C),
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: _buildText(
-                                      title:
-                                          "Description : Turmeric, a plant in the ginger family, is native to South east Asia and is grown commercially in that region.",
-                                      size: 11.px),
-                                ),
-                              ),
-                              buildVSpacer(20),
-                            ],
-                          ),
-                        ),
-                        buildVSpacer(3.h),
-                        Stack(
-                          children: [
-                            Container(
-                              width: Adaptive.w(100),
-                              padding: EdgeInsets.all(12.sp),
-                              decoration: BoxDecoration(
-                                  color: Color(0xffF4BC1C),
-                                  borderRadius: BorderRadius.only(
-                                      topLeft: Radius.circular(12.sp),
-                                      topRight: Radius.circular(12.sp))),
-                              child: Column(
-                                children: [
-                                  buildVSpacer(4.h),
-                                  Row(
-                                    children: [
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.center,
-                                        children: [
-                                          Image.asset('assets/Mask group.png'),
-                                          SizedBox(
-                                            height: Adaptive.h(6),
-                                            child: Row(children: [
-                                              Text(
-                                                '4.5',
-                                                style: GoogleFonts.lato(
-                                                    fontWeight: FontWeight.w400,
-                                                    fontSize: 14.sp),
-                                              ),
-                                              ...List.generate(3, (index) {
-                                                return SizedBox(
-                                                  height: 3.h,
-                                                  child: Icon(
-                                                    Icons.star,
-                                                    size:
-                                                        12, // Adjust size as needed
-                                                    color: Colors
-                                                        .black, // Adjust color as needed
-                                                  ),
-                                                );
-                                              }),
-                                            ]),
-                                          )
-                                        ],
-                                      ),
-                                      buildHSpacer(3.w),
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Rahul Tiwari',
-                                            style: GoogleFonts.lato(
-                                                fontWeight: FontWeight.w400,
-                                                fontSize: 12.px),
-                                          ),
-                                          buildVSpacer(2.h),
-                                          Text(
-                                            'Mobile   :  +91 1234567890',
-                                            style: GoogleFonts.lato(
-                                                fontWeight: FontWeight.w400,
-                                                fontSize: 9.px),
-                                          ),
-                                          buildVSpacer(2.h),
-                                          Text(
-                                            'Address : Mg-Road , Street No: 6 , 9th Cross, Beside\nCanara Bank , Bengaluru , Kanataka - 560001',
-                                            style: GoogleFonts.lato(
-                                                fontWeight: FontWeight.w400,
-                                                fontSize: 8.px),
-                                          )
-                                        ],
-                                      )
-                                    ],
-                                  ),
-                                  buildVSpacer(2.h),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        padding: EdgeInsets.all(12.sp),
-                                        decoration: BoxDecoration(
-                                            borderRadius:
-                                                BorderRadius.circular(14.sp),
-                                            color: Colors.white),
-                                        child: Center(
-                                          child: Text(
-                                            'Sold Out',
-                                            style: GoogleFonts.lato(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 12.px),
-                                          ),
-                                        ),
-                                      )
-                                    ],
-                                  ),
-                                  buildVSpacer(1.h)
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: -18,
-                  left: 20,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xff3985D7),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: Colors.black26),
-                    ),
-                    child: Row(
-                      children: [
-                        Image.asset(
-                          "assets/check.png",
-                          scale: 0.8,
-                        ),
-                        buildHSpacer(5),
-                        const Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "AD ID: 4545454454",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              "Posted Date : 05-April-24",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: Adaptive.h(21),
-                  left: 20,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xff5EAB04),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: Colors.black26),
-                    ),
-                    child: Row(
-                      children: [
-                        Image.asset(
-                          "assets/check.png",
-                          scale: 0.8,
-                        ),
-                        buildHSpacer(5),
-                        const Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Order ID: 67001",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              "Date : 05-April-24",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+    return Obx(() {
+      if (postSellAdService.isLoading.value) {
+        return Center(child: CircularProgressIndicator());
+      }
+      if (postSellAdService.error.value.isNotEmpty) {
+        return Center(child: Text('Error: ' + postSellAdService.error.value));
+      }
+      if (postSellAdService.sellAds.isEmpty) {
+        return Center(child: Text('No completed ads found.'));
+      }
+      return ListView.builder(
+        shrinkWrap: true,
+        itemCount: postSellAdService.sellAds.length,
+        itemBuilder: (context, index) {
+          final ad = postSellAdService.sellAds[index];
+          return ListTile(
+            title: Text(ad.variety ?? 'No Title'),
+            subtitle: Text(
+              'Variety: ${ad.variety}\n'
+              'Min Price: ₹${ad.minPriceApprox}\n'
+              'Total Cost: ₹${ad.totalCostApprox}\n'
+              'Location: ${ad.location.join(', ')}',
             ),
-          ),
-          isClickedCompleted
-              ? Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                  child: Column(
-                    children: [
-                      buildVSpacer(2.h),
-                      CompletedScreenFieldWidget(
-                        title: 'SELLER INFORMATION',
-                      ),
-                      buildVSpacer(2.h),
-                      CompletedScreenFieldWidget(
-                        title: 'BUYER INFORMATION',
-                        title2: "BUYER INFORMATION",
-                      ),
-                      buildVSpacer(2.h),
-                      CompletedScreenFieldWidget(
-                        title: 'MITRA INFORMATION',
-                        title2: "MITRA INFORMATION",
-                        id: "Mitra ID",
-                      ),
-                      buildVSpacer(2.h),
-                      CompleteInspectionWidget2(
-                        title: "Inspection",
-                      ),
-                      buildVSpacer(2.h),
-                      CompleteInspectionWidget2(
-                          title: 'Transport Status', isBlur: true),
-                      buildVSpacer(2.h),
-                      CompleteInspectionWidget2(
-                        title: 'PACKAGING & LABELING',
-                        isBlur: true,
-                      ),
-                      buildVSpacer(2.h),
-                      CompleteInspectionWidget2(
-                        title: 'PAYMENT',
-                        isBlur: true,
-                      )
-                    ],
-                  ),
-                )
-              : SizedBox(),
-          buildVSpacer(10.h),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18.0),
-            child: CustomButton(
-                text: "Home",
-                onPressed: () {
-                  Navigator.pop(context);
-                }),
-          ),
-        ],
-      ),
-    );
+          );
+        },
+      );
+    });
   }
 }
 

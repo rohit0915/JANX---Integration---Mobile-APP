@@ -5,9 +5,29 @@ import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
 import 'package:jan_x/widgets/custom_textfield.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
+import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:jan_x/services/kyc_service.dart';
 
-class BusinessDetailsScreen extends StatelessWidget {
+class BusinessDetailsScreen extends StatefulWidget {
   const BusinessDetailsScreen({super.key});
+
+  @override
+  State<BusinessDetailsScreen> createState() => _BusinessDetailsScreenState();
+}
+
+class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
+  final TextEditingController gstController = TextEditingController();
+  final TextEditingController tradeNameController = TextEditingController();
+  final TextEditingController addressController = TextEditingController();
+
+  @override
+  void dispose() {
+    gstController.dispose();
+    tradeNameController.dispose();
+    addressController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,29 +57,32 @@ class BusinessDetailsScreen extends StatelessWidget {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              const CustomTxtFormField(
+              CustomTxtFormField(
                 hintText: "Enter GST number",
+                controller: gstController,
               ),
               buildVSpacer(2.h),
-              const CustomTxtFormField(
+              CustomTxtFormField(
                 hintText: "Trade name",
+                controller: tradeNameController,
               ),
               buildVSpacer(2.h),
-              const CustomTxtFormField(
+              CustomTxtFormField(
                 hintText: "Your address",
+                controller: addressController,
               ),
               buildVSpacer(2.h),
-              Flex(
+              const Flex(
                 direction: Axis.horizontal,
                 children: [
-                  const Expanded(
+                  Expanded(
                     flex: 1,
                     child: CustomTxtFormField(
                       hintText: "Pincode",
                     ),
                   ),
-                  buildHSpacer(4.w),
-                  const Expanded(
+                  SizedBox(width: 16),
+                  Expanded(
                     flex: 1,
                     child: CustomTxtFormField(
                       hintText: "City",
@@ -68,17 +91,17 @@ class BusinessDetailsScreen extends StatelessWidget {
                 ],
               ),
               buildVSpacer(2.h),
-              Flex(
+              const Flex(
                 direction: Axis.horizontal,
                 children: [
-                  const Expanded(
+                  Expanded(
                     flex: 1,
                     child: CustomTxtFormField(
                       hintText: "State",
                     ),
                   ),
-                  buildHSpacer(4.w),
-                  const Expanded(
+                  SizedBox(width: 16),
+                  Expanded(
                     flex: 1,
                     child: CustomTxtFormField(
                       hintText: "District",
@@ -143,7 +166,7 @@ class BusinessDetailsScreen extends StatelessWidget {
               CustomButton(
                 text: "Save Details",
                 onPressed: () {
-                  Navigator.pop(context);
+                  _submitBusinessKyc(context);
                 },
                 size: 15.px,
               )
@@ -254,5 +277,32 @@ class BusinessDetailsScreen extends StatelessWidget {
           // fontFamily: 'Poppins',
           color: color ?? Colors.black),
     );
+  }
+
+  void _submitBusinessKyc(BuildContext context) async {
+    final box = GetStorage();
+    final token = box.read('token');
+    if (token == null) return;
+    final kycService = Get.find<KycService>();
+
+    final data = {
+      'gst_number': gstController.text,
+      'trade_name': tradeNameController.text,
+      'address': addressController.text,
+
+    };
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => Center(child: CircularProgressIndicator()));
+    final response = await kycService.updateBusinessDetails(data, );
+    Navigator.pop(context);
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Business KYC submitted successfully.')));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to submit Business KYC.')));
+    }
   }
 }
