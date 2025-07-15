@@ -307,11 +307,92 @@ class _SaleAddScreenState extends State<SaleAddScreen> {
         itemCount: saleAdService.saleAds.length,
         itemBuilder: (context, index) {
           final ad = saleAdService.saleAds[index];
-          return Card(
-            child: ListTile(
-              title: Text(ad.cropType),
-              subtitle: Text(
-                  'Variety: ${ad.variety}\nQuantity: ${ad.approxQuantity ?? '-'}\nLocation: ${ad.location.join(', ')}'),
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Image.asset("assets/pro.png",
+                            width: 48, height: 48), // or ad.image if available
+                        SizedBox(width: 20),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(ad.cropType ?? '',
+                                style: TextStyle(
+                                    fontSize: 18, fontWeight: FontWeight.bold)),
+                            Text("Variety: ${ad.variety ?? '-'}",
+                                style: TextStyle(fontSize: 11)),
+                            Text("Location: ${ad.location.join(', ')}",
+                                style: TextStyle(fontSize: 11)),
+                          ],
+                        ),
+                        Spacer(),
+                        // Add verified/star/favorite icon if needed
+                      ],
+                    ),
+                    SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Text("Quantity (approx.)"),
+                        Spacer(),
+                        Text(
+                            "${ad.approxQuantity ?? '-'} ${ad.quantityType ?? ''}"),
+                      ],
+                    ),
+                    Container(
+                      color: Color(0xffF4BC1C),
+                      height: 1,
+                    ),
+                    Row(
+                      children: [
+                        Text("Min-Price (approx.)"),
+                        Spacer(),
+                        Text("₹ ${ad.minPriceApprox ?? '-'}"),
+                      ],
+                    ),
+                    Container(
+                      color: Color(0xffF4BC1C),
+                      height: 1,
+                    ),
+                    Row(
+                      children: [
+                        Text("Total Cost (approx.)"),
+                        Spacer(),
+                        Text("₹ ${ad.totalCostApprox ?? '-'}"),
+                      ],
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Color(0xffF4BC1C),
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      margin: EdgeInsets.only(top: 8),
+                      padding: EdgeInsets.all(8),
+                      child: Text(
+                        "Description : ${ 'No description'}",
+                        style: TextStyle(fontSize: 11),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           );
         },

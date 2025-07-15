@@ -10,6 +10,7 @@ import 'package:jan_x/post_sell_ad/chat_screen/chat_screen.dart';
 import 'package:jan_x/post_sell_ad/my_ad_onTap_screen.dart';
 import 'package:jan_x/post_sell_ad/view_details/view_details_screen.dart';
 import 'package:jan_x/post_sell_ad/widgets/post_sell_widgets_widget.dart';
+import 'package:jan_x/services/post_buy_ad_service.dart';
 import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
@@ -35,10 +36,10 @@ bool isOtherServiceClicked = false;
 class _PostSellAdScreenState extends State<PostSellAdScreen> {
   String? selectedCropId;
   String? selectedVarietyId;
-  // Example data with IDs (replace with your real data)
+  
   List<Map<String, String>> cropTypes = [];
   List<Map<String, String>> varietyTypes = [];
-  bool isVarietyLoading = false;
+
   String? varietyError;
   String headerTitle = "Seller";
 
@@ -59,8 +60,11 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
 
   bool mitraVerification = false;
   List<String> productImages = [];
+  bool isVarietyLoading = true;
+  bool isLoading = false;
+  String? error;
   // List<Feature> otherFeatures = [];
-
+final PostBuyAdService postBuyAdService = Get.find<PostBuyAdService>();
   bool isPosting = false;
   String postError = '';
   bool userIsMitra = false;
@@ -70,7 +74,7 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
     super.initState();
     _fetchMyAds();
     _checkMitraStatus();
-    _fetchCropTypes(); // Restore API fetching for crops
+    _fetchCropTypes(); 
   }
 
   void _fetchMyAds() async {
@@ -97,35 +101,58 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
   }
 
   Future<void> _fetchCropTypes() async {
+    setState(() {
+      isLoading = true;
+      error = null;
+    });
     try {
-      final types = await postSellAdService.fetchCropTypes();
+      final types = await postBuyAdService.fetchCropTypes();
       setState(() {
         cropTypes = types;
       });
-    } catch (_) {}
+    } catch (e) {
+      setState(() {
+        error = 'Error loading crops.';
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   Future<void> _fetchVarietiesForCrop(String cropId) async {
     setState(() {
       isVarietyLoading = true;
-      varietyError = null;
+      error = null;
       varietyTypes = [];
       selectedVarietyId = null;
     });
     try {
-      final varieties = await postSellAdService.fetchVarietiesForCrop(cropId);
+      final varieties = await postBuyAdService.fetchVarietiesForCrop();
+      print('Fetched varieties: $varieties');
       setState(() {
         varietyTypes = varieties;
       });
     } catch (e) {
       setState(() {
-        varietyError = 'Error loading varieties.';
+        error = 'Error loading varieties.';
       });
     } finally {
       setState(() {
         isVarietyLoading = false;
       });
     }
+  }
+
+  void _handleCropChange(String? val) {
+    setState(() => selectedCropId = val);
+    if (val != null) _fetchVarietiesForCrop(val);
+    selectedVarietyId = null;
+  }
+
+  void _handleVarietyChange(String? val) {
+    setState(() => selectedVarietyId = val);
   }
 
   bool value = true;
@@ -240,41 +267,27 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
             fontWeight: FontWeight.bold,
             size: 16),
         buildVSpacer(20),
-        _buildText(title: "Type of Crop", color: const Color(0xffF4BC1C)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12),
-          child: buildCustomTextFieldWithDropdown(
-            value: selectedCropId,
-            items: cropTypes,
-            onChanged: (val) {
-              setState(() => selectedCropId = val);
-              if (val != null)
-                _fetchVarietiesForCrop(val); // Fetch varieties from API
-              selectedVarietyId = null;
-            },
-            hint: 'Select Crop',
-            getLabel: (item) => item['name']!,
-            getValue: (item) => item['id']!,
-          ),
-        ),
-        buildVSpacer(20),
-        _buildText(title: "Variety", color: const Color(0xffF4BC1C)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12),
-          child: isVarietyLoading
-              ? Center(child: CircularProgressIndicator())
-              : varietyError != null
-                  ? Text(varietyError!, style: TextStyle(color: Colors.red))
-                  : buildCustomTextFieldWithDropdown(
+       _buildText(title: "Type of Crop", color: const Color(0xffF4BC1C)),
+              _buildDropdown(
+                value: selectedCropId,
+                items: cropTypes,
+                onChanged: _handleCropChange,
+                hint: 'Select Crop',
+                getLabel: (item) => item['name']!,
+                getValue: (item) => item['id']!,
+              ),
+              buildVSpacer(20),
+              _buildText(title: "Variety", color: const Color(0xffF4BC1C)),
+              isVarietyLoading
+                  ? CircularProgressIndicator()
+                  : _buildDropdown(
                       value: selectedVarietyId,
-                      items: varietyTypes,
-                      onChanged: (val) =>
-                          setState(() => selectedVarietyId = val),
+                      items: selectedCropId == null ? [] : varietyTypes,
+                      onChanged: _handleVarietyChange,
                       hint: 'Select Variety',
                       getLabel: (item) => item['name']!,
                       getValue: (item) => item['id']!,
                     ),
-        ),
         buildVSpacer(20),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12),
@@ -615,15 +628,16 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
     );
   }
 
-  Widget buildCustomTextFieldWithDropdown<ITEM>({
+  Widget _buildDropdown({
     required String? value,
-    required List<ITEM> items,
-    required void Function(String?) onChanged,
-    required String Function(ITEM) getLabel,
-    required String Function(ITEM) getValue,
+    required List<Map<String, String>> items,
+    required void Function(String?)? onChanged, // <-- nullable
+    required String Function(Map<String, String>) getLabel,
+    required String Function(Map<String, String>) getValue,
     String? hint,
   }) {
     return Container(
+      height: 6.h,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
         border: Border.all(color: const Color(0xffF4BC1C), width: 2.0),

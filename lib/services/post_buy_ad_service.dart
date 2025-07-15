@@ -130,50 +130,58 @@ class PostBuyAdService extends GetxController {
   }
 
   Future<List<Map<String, String>>> fetchCropTypes() async {
-    final token = box.read('token');
-    final response = await http.get(
-      Uri.parse('$baseUrl/crop-types/active'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-    if (response.statusCode == 200) {
-      final decoded = jsonDecode(response.body);
-      final cropTypes = decoded['crop_types'] ?? [];
-      return (cropTypes as List)
-          .map<Map<String, String>>((e) => {
-                'id': e['_id'],
-                'name': e['name'],
-              })
-          .toList();
-    } else {
-      throw Exception('Failed to fetch crop types');
-    }
-  }
+  final token = box.read('token');
+  print('Fetching crop types with token: $token');
 
-  Future<List<Map<String, String>>> fetchVarietiesForCrop(String cropId) async {
-    final token = box.read('token');
-    final response = await http.get(
-      Uri.parse('$baseUrl/crop-varieties/active'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-    if (response.statusCode == 200) {
-      final decoded = jsonDecode(response.body);
-      final cropVarieties = decoded['crop_varieties'] ?? [];
-      return (cropVarieties as List)
-          .map<Map<String, String>>((e) => {
-                'id': e['_id'],
-                'name': e['name'],
-              })
-          .toList();
-    } else {
-      throw Exception('Failed to fetch crop varieties');
-    }
-  }
+  final response = await http.get(
+    Uri.parse('$baseUrl/crop-types/active'),
+    headers: {'Authorization': 'Bearer $token'},
+  );
 
+  print('Response status code (crop types): ${response.statusCode}');
+  print('Response body (crop types): ${response.body}');
+
+  if (response.statusCode == 200) {
+    final decoded = jsonDecode(response.body);
+    final cropTypes = decoded['crop_types'] ?? [];
+    print('Decoded crop types: $cropTypes');
+
+    return (cropTypes as List)
+        .map<Map<String, String>>((e) => {
+              'id': e['_id'],
+              'name': e['name'],
+            })
+        .toList();
+  } else {
+    throw Exception('Failed to fetch crop types');
+  }
+}
+
+Future<List<Map<String, String>>> fetchVarietiesForCrop() async {
+  final token = box.read('token');
+  final response = await http.get(
+    Uri.parse('$baseUrl/crop-varieties/active'),
+    headers: {'Authorization': 'Bearer $token'},
+  );
+
+  if (response.statusCode == 200) {
+    final decoded = jsonDecode(response.body);
+    final cropVarieties = decoded['varieties'] ?? []; // <-- FIXED KEY
+    return (cropVarieties as List)
+        .map<Map<String, String>>((e) => {
+              'id': e['_id'],
+              'name': e['name'],
+            })
+        .toList();
+  } else {
+    throw Exception('Failed to fetch crop varieties');
+  }
+}
   Future<void> createBuyAdPost({
     required BuildContext context,
     required String? selectedCropId,
     required String? selectedVarietyId,
-    // Add other required fields as needed
+  
   }) async {
     if ((selectedCropId == null || selectedCropId.isEmpty) ||
         (selectedVarietyId == null || selectedVarietyId.isEmpty)) {
@@ -185,7 +193,7 @@ class PostBuyAdService extends GetxController {
     final data = {
       'crop_type': selectedCropId,
       'variety': selectedVarietyId,
-      // Add other fields here
+     
     };
     try {
       final response = await createBuyAd(

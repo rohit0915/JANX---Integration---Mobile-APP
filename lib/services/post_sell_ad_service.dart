@@ -193,20 +193,28 @@ class PostSellAdService extends GetxService {
   }
 
   Future<List<Map<String, String>>> fetchVarietiesForCrop(String cropId) async {
+    print('fetchVarietiesForCrop called with cropId: $cropId');
     final token = box.read('token');
     final response = await http.get(
       Uri.parse('$baseUrl/crop-varieties/active?crop_type_id=$cropId'),
       headers: {'Authorization': 'Bearer $token'},
     );
+    print('API response status: ${response.statusCode}');
+    print('API response body: ${response.body}');
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
-      return (decoded is List ? decoded : (decoded['data'] ?? []))
+      final varieties = decoded is List
+          ? decoded
+          : (decoded['varieties'] ?? decoded['data'] ?? []);
+      print('Parsed varieties: ${varieties}');
+      return (varieties as List)
           .map<Map<String, String>>((e) => {
                 'id': e['_id'],
                 'name': e['name'],
               })
           .toList();
     } else {
+      print('Failed to fetch crop varieties');
       throw Exception('Failed to fetch crop varieties');
     }
   }
@@ -253,7 +261,7 @@ class PostSellAdService extends GetxService {
     final response = await createSellAd(ad);
     print('Create Sell Ad API response: ' + response.body);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Status: \\${response.statusCode}')),
+      SnackBar(content: Text('Status: ${response.statusCode}')),
     );
   }
 }

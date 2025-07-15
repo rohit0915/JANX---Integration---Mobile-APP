@@ -17,7 +17,7 @@ class SaleAdService extends GetxController {
     isLoading.value = true;
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/sell-ad/active'),
+        Uri.parse('$baseUrl/sell-ad/my-ads'),
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -26,9 +26,7 @@ class SaleAdService extends GetxController {
       if (response.statusCode == 200) {
         print('Sale Ads API response: ' + response.body);
         final decoded = jsonDecode(response.body);
-        final List<dynamic> data = decoded is List
-            ? decoded
-            : (decoded['data'] is List ? decoded['data'] : []);
+        final List<dynamic> data = decoded['ads'] is List ? decoded['ads'] : [];
         saleAds.value = data.map((e) => SellAdResponse.fromJson(e)).toList();
         error.value = '';
       } else {

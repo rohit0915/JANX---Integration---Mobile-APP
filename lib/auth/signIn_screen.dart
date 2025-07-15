@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:jan_x/auth/otp_screen.dart';
 import 'package:jan_x/auth/reset_password_screen.dart';
 import 'package:jan_x/profile/profile_other_screens/mitra/mitra_screen.dart';
+import 'package:jan_x/services/post_buy_ad_service.dart';
 import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
@@ -153,7 +154,10 @@ class _SignInScreenState extends State<SignInScreen>
                         width: Adaptive.w(42),
                         text: "Skip",
                         textColor: const Color(0xffF4BC1C),
-                        onPressed: () {},
+                        onPressed: () {
+                          final controller = Get.find<PostBuyAdService>();
+                          controller.fetchVarietiesForCrop();
+                        },
                         color: const Color(0xff444444),
                         borderColor: buttonColor,
                       )
@@ -200,9 +204,7 @@ Widget _buildTextHeader(
         textAlign: TextAlign.center,
         style: TextStyle(
             fontSize: size ?? 14,
-            fontWeight: fontWeight ??
-                FontWeight
-                    .w500, 
+            fontWeight: fontWeight ?? FontWeight.w500,
             fontFamily: 'Poppins',
             color: color ?? Colors.black),
       ),
@@ -225,9 +227,7 @@ Widget _buildText(
         title,
         style: GoogleFonts.lato(
             fontSize: size ?? 14,
-            fontWeight: fontWeight ??
-                FontWeight
-                    .w400, 
+            fontWeight: fontWeight ?? FontWeight.w400,
             // fontFamily: 'Poppins',
             color: color ?? Colors.black),
       ),
@@ -250,9 +250,7 @@ Widget _buildText1(
         title,
         style: TextStyle(
             fontSize: size ?? 14,
-            fontWeight: fontWeight ??
-                FontWeight
-                    .w400, 
+            fontWeight: fontWeight ?? FontWeight.w400,
             fontFamily: 'Poppins',
             color: color ?? Colors.black),
       ),

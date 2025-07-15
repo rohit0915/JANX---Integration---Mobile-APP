@@ -23,7 +23,7 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
   String? selectedVarietyId;
   List<Map<String, String>> cropTypes = [];
   List<Map<String, String>> varietyTypes = [];
-  bool isVarietyLoading = false;
+  bool isVarietyLoading = true;
   bool isLoading = false;
   String? error;
   final PostBuyAdService postBuyAdService = Get.find<PostBuyAdService>();
@@ -64,7 +64,8 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
       selectedVarietyId = null;
     });
     try {
-      final varieties = await postBuyAdService.fetchVarietiesForCrop(cropId);
+      final varieties = await postBuyAdService.fetchVarietiesForCrop();
+      print('Fetched varieties: $varieties');
       setState(() {
         varietyTypes = varieties;
       });
@@ -81,8 +82,8 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
 
   void _handleCropChange(String? val) {
     setState(() => selectedCropId = val);
-    if (val != null) _fetchVarietiesForCrop(val);
-    selectedVarietyId = null;
+    if (val != null) _fetchVarietiesForCrop(val); 
+    selectedVarietyId = null; 
   }
 
   void _handleVarietyChange(String? val) {
@@ -103,7 +104,6 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
       context: context,
       selectedCropId: selectedCropId,
       selectedVarietyId: selectedVarietyId,
-      // Add other required fields here
     );
     setState(() {
       isLoading = false;
@@ -137,17 +137,19 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
               buildVSpacer(20),
               _buildText(title: "Variety", color: const Color(0xffF4BC1C)),
               isVarietyLoading
-                  ? Center(child: CircularProgressIndicator())
-                  : error != null
-                      ? Text(error!, style: TextStyle(color: Colors.red))
-                      : _buildDropdown(
-                          value: selectedVarietyId,
-                          items: varietyTypes,
-                          onChanged: _handleVarietyChange,
-                          hint: 'Select Variety',
-                          getLabel: (item) => item['name']!,
-                          getValue: (item) => item['id']!,
-                        ),
+                  ? CircularProgressIndicator()
+                  : _buildDropdown(
+                      value: selectedVarietyId,
+                      items: selectedCropId == null ? [] : varietyTypes,
+                      onChanged: _handleVarietyChange,
+                      hint: 'Select Variety',
+                      getLabel: (item) => item['name']!,
+                      getValue: (item) => item['id']!,
+                    ),
+              // ? Center(child: CircularProgressIndicator())
+              // : error != null
+              //     ? Text(error!, style: TextStyle(color: Colors.red))
+
               buildVSpacer(20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -580,7 +582,7 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
   Widget _buildDropdown({
     required String? value,
     required List<Map<String, String>> items,
-    required void Function(String?) onChanged,
+    required void Function(String?)? onChanged, // <-- nullable
     required String Function(Map<String, String>) getLabel,
     required String Function(Map<String, String>) getValue,
     String? hint,
