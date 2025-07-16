@@ -129,7 +129,7 @@ Container buildCustomTextField3({
       ],
     ),
                   prefix: suffixIcon,
-                  suffixText: 'QT', // Add your fixed text here
+                  suffixText: '', 
                   suffixStyle: GoogleFonts.lato(
                     fontWeight: FontWeight.w700,
                     fontSize: 14,

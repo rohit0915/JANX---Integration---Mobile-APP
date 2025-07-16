@@ -118,4 +118,20 @@ class KycService extends GetxController {
     );
     return response;
   }
+
+  Future<http.Response> postMitraRegistration(Map<String, dynamic> data) async {
+    final token = box.read('token');
+    final response = await http.post(
+      Uri.parse('$baseUrl/mitra/create'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(data),
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      box.write('mitra_registered', true);
+    }
+    return response;
+  }
 }

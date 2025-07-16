@@ -115,6 +115,16 @@ class _SignInScreenState extends State<SignInScreen>
                             isLoading = true;
                             errorMessage = '';
                           });
+                          // Validation for empty fields
+                          if (nameController.text.trim().isEmpty ||
+                              phoneController.text.trim().isEmpty) {
+                            setState(() {
+                              errorMessage =
+                                  'Name and phone number are required.';
+                              isLoading = false;
+                            });
+                            return;
+                          }
                           try {
                             final response = await authServices.sendOtp(
                               name: nameController.text.trim(),
@@ -170,6 +180,15 @@ class _SignInScreenState extends State<SignInScreen>
                       CustomButton1(
                         text: "Login",
                         onPressed: () {
+                          // Validation for empty fields
+                          if (nameController.text.trim().isEmpty ||
+                              phoneController.text.trim().isEmpty) {
+                            setState(() {
+                              errorMessage =
+                                  'Name and phone number are required.';
+                            });
+                            return;
+                          }
                           Navigator.of(context).pushReplacement(
                             MaterialPageRoute(
                               builder: (context) => MitraProfileScreen(),
@@ -182,7 +201,15 @@ class _SignInScreenState extends State<SignInScreen>
                       // CustomButton1(width: Adaptive.w(42),text: "Skip",textColor: const Color(0xffF4BC1C), onPressed: (){}, backgroundColor: const Color(0xff444444),)
                     ],
                   ),
-            buildVSpacer(50)
+            buildVSpacer(50),
+            if (errorMessage.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  errorMessage,
+                  style: TextStyle(color: Colors.red, fontSize: 14),
+                ),
+              ),
           ],
         )),
       ),

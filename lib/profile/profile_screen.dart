@@ -23,9 +23,43 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:jan_x/services/kyc_service.dart';
 import 'dart:convert';
+import 'package:jan_x/services/mitra_service.dart';
+import 'package:jan_x/profile/profile_other_screens/mitra_details/mitra_profile/mitra_profile_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool isMitraRegistered = false;
+  bool isLoadingMitra = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkMitraStatus();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _checkMitraStatus();
+  }
+
+  Future<void> _checkMitraStatus() async {
+    setState(() {
+      isLoadingMitra = true;
+    });
+    final mitraService = Get.find<MitraService>();
+    await mitraService.getMitraProfile();
+    setState(() {
+      isMitraRegistered = mitraService.mitraProfiles.isNotEmpty;
+      isLoadingMitra = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -373,59 +407,43 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     InkWell(
                       onTap: () async {
-                        final box = GetStorage();
-                        final token = box.read('token');
-                        if (token != null) {
-                          final response =
-                              await Get.find<KycService>().getKycProfile();
-                          if (response.statusCode == 200) {
-                            final data = jsonDecode(response.body);
-                          
-                            final isKycDone = data['kyc_completed'] == true ||
-                                data['kyc_completed'] == 1;
-                            if (isKycDone) {
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const MitraREgistractionScreen(),
-                                  ));
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text(
-                                        'Please complete your KYC before Mitra Registration.')),
-                              );
-                            }
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text('Failed to check KYC status.')),
-                            );
-                          }
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('User not logged in.')),
-                          );
-                        }
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const MitraREgistractionScreen(),
+                          ),
+                        );
                       },
                       child: listTileMethod(
                           index: "10",
                           title: "Mitra Registration",
                           subTitle: "Complete your KYC"),
                     ),
-                    InkWell(
-                      onTap: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const MitraDetailsScreen(),
-                            ));
-                      },
-                      child: listTileMethod(
-                          index: "11",
-                          title: "Mitra Details",
-                          subTitle: "View mitra"),
+                    // Mitra Profile tile (greyed out and unclickable if not registered)
+                    AbsorbPointer(
+                      absorbing: !isMitraRegistered,
+                      child: Opacity(
+                        opacity: isMitraRegistered ? 1.0 : 0.4,
+                        child: InkWell(
+                          onTap: isMitraRegistered
+                              ? () async {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const MitraProfileDetailsScreen(),
+                                    ),
+                                  );
+                                  _checkMitraStatus(); // Refresh status after returning
+                                }
+                              : null,
+                          child: listTileMethod(
+                              index: "11",
+                              title: "Mitra Profile",
+                              subTitle: "View mitra"),
+                        ),
+                      ),
                     ),
                     listTileMethod(
                         index: "12",

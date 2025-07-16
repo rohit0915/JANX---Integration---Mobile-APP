@@ -42,8 +42,9 @@ class MitraProfileDetailsScreen extends StatelessWidget {
         if (mitraService.mitraProfiles.isEmpty) {
           return Center(child: Text('No mitra profile found.'));
         }
-  
+
         final profile = mitraService.mitraProfiles.first;
+        // TODO: Replace the below with real fields from MitraProfileResponse when available
         return Padding(
           padding: EdgeInsets.symmetric(
               horizontal: Adaptive.w(3), vertical: Adaptive.h(2)),

@@ -9,9 +9,37 @@ import 'package:otp_text_field/otp_field.dart';
 import 'package:otp_text_field/otp_field_style.dart';
 import 'package:otp_text_field/style.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:jan_x/services/kyc_service.dart';
+import 'package:get/get.dart';
 
-class OtpAadharCardScreen extends StatelessWidget {
-  const OtpAadharCardScreen({super.key});
+class OtpAadharCardScreen extends StatefulWidget {
+  final String? otp;
+  const OtpAadharCardScreen({super.key, this.otp});
+
+  @override
+  State<OtpAadharCardScreen> createState() => _OtpAadharCardScreenState();
+}
+
+class _OtpAadharCardScreenState extends State<OtpAadharCardScreen> {
+  String otp = '';
+  final TextEditingController otpController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.otp != null && widget.otp!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showOtpPopup(context, widget.otp!);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    otpController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +64,6 @@ class OtpAadharCardScreen extends StatelessWidget {
       body: Padding(
         padding: EdgeInsets.symmetric(horizontal: Adaptive.w(3)),
         child: Column(
-          // mainAxisAlignment: MainAxisAlignment.center,
           children: [
             buildVSpacer(16.h),
             Center(
@@ -60,35 +87,33 @@ class OtpAadharCardScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: OTPTextField(
-                  otpFieldStyle: OtpFieldStyle(
-                    backgroundColor: const Color(0xFFDDDDDD),
-                  ),
-                  // controller: otpController,
-                  length: 6,
-                  width: MediaQuery.of(context).size.width,
-                  textFieldAlignment: MainAxisAlignment.spaceAround,
-                  fieldWidth: 40,
-                  fieldStyle: FieldStyle.box,
-                  outlineBorderRadius: 8,
-                  style: const TextStyle(fontSize: 17),
-                  onChanged: (pin) {
-                    // otps = pin;
-                    // print("Changed: " + otps);
-                  },
-                  onCompleted: (pin) {
-                    print("Completed: " + pin);
-                  }),
+                length: 4,
+                width: MediaQuery.of(context).size.width,
+                fieldWidth: 40,
+                style: TextStyle(fontSize: 17),
+                textFieldAlignment: MainAxisAlignment.spaceAround,
+                fieldStyle: FieldStyle.box,
+                otpFieldStyle: OtpFieldStyle(
+                  backgroundColor: Colors.white,
+                  borderColor: buttonColor,
+                  enabledBorderColor: buttonColor,
+                  focusBorderColor: buttonColor,
+                ),
+                onChanged: (val) {
+                  otp = val;
+                },
+                onCompleted: (val) {
+                  setState(() {
+                    otp = val;
+                  });
+                },
+              ),
             ),
             buildVSpacer(9.h),
             CustomButton(
               text: "Verify OTP",
-              onPressed: () {
-                Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const KycScreen(),
-                    ),
-                   );
+              onPressed: () async {
+                await _verifyOtp(context);
               },
               color: buttonColor,
               size: 15.px,
@@ -96,13 +121,6 @@ class OtpAadharCardScreen extends StatelessWidget {
               weight: FontWeight.w600,
             ),
             buildVSpacer(8.h),
-            CustomButton3(
-              text: "Resend",
-              onPressed: () {},
-              color: Colors.transparent,
-              borderColor: buttonColor,
-              textColor: buttonColor,
-            )
           ],
         ),
       ),
@@ -120,8 +138,54 @@ class OtpAadharCardScreen extends StatelessWidget {
       style: GoogleFonts.lato(
           fontSize: size ?? 14,
           fontWeight: fontWeight ?? FontWeight.w400,
-          // fontFamily: 'Poppins',
           color: color ?? Colors.black),
+    );
+  }
+
+  Future<void> _verifyOtp(BuildContext context) async {
+    final box = GetStorage();
+    final token = box.read('token');
+    if (token == null) return;
+    final kycService = Get.find<KycService>();
+  
+   
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => Center(child: CircularProgressIndicator()));
+    final data = {
+      'otp': otp,
+    };
+    final response = await kycService.aadharVerifyOtp(data);
+    Navigator.pop(context);
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Aadhaar OTP verified successfully.')),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => KycScreen()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to verify Aadhaar OTP.')),
+      );
+    }
+  }
+
+  void _showOtpPopup(BuildContext context, String otp) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Your OTP'),
+        content: Text('OTP: ' + otp),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 }

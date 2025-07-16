@@ -17,6 +17,7 @@ import 'package:responsive_sizer/responsive_sizer.dart';
 import 'package:get/get.dart';
 import 'package:jan_x/services/sale_ad_service.dart';
 import 'package:jan_x/model/sell_ad_models.dart';
+import 'package:intl/intl.dart';
 
 class SaleAddScreen extends StatefulWidget {
   SaleAddScreen({super.key});
@@ -313,85 +314,178 @@ class _SaleAddScreenState extends State<SaleAddScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8.0),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
               ),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14.0, vertical: 12),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Image.asset("assets/pro.png",
-                            width: 48, height: 48), // or ad.image if available
-                        SizedBox(width: 20),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(ad.cropType ?? '',
+              child: Column(
+                children: [
+                  Align(
+                    alignment: Alignment.topLeft,
+                    child: Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Color(0xFF96510C), // Brown color
+                        borderRadius: BorderRadius.only(
+                          topRight: Radius.circular(20),
+                          bottomLeft: Radius.circular(20),
+                          topLeft: Radius.circular(20),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle,
+                              color: Colors.white, size: 18),
+                          SizedBox(width: 6),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Buy ID : ${ad.buyId ?? '-'}',
                                 style: TextStyle(
-                                    fontSize: 18, fontWeight: FontWeight.bold)),
-                            Text("Variety: ${ad.variety ?? '-'}",
-                                style: TextStyle(fontSize: 11)),
-                            Text("Location: ${ad.location.join(', ')}",
-                                style: TextStyle(fontSize: 11)),
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              Text(
+                                'Posted Date : ${_formatPostedDate(ad.createdAt)}',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Container(
+                        width: Adaptive.w(30),
+                        height: Adaptive.h(5),
+                        decoration: BoxDecoration(
+                            color: const Color(0xffF4BC1C),
+                            borderRadius: BorderRadius.only(
+                              bottomLeft: Radius.circular(14.sp),
+                            )),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.star),
+                            Text(
+                              'Verified',
+                              style: GoogleFonts.lato(
+                                  fontWeight: FontWeight.w600, fontSize: 10.px),
+                            )
                           ],
                         ),
-                        Spacer(),
-                        // Add verified/star/favorite icon if needed
-                      ],
-                    ),
-                    SizedBox(height: 10),
-                    Row(
+                      )
+                    ],
+                  ),
+                  buildVSpacer(10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14.0, vertical: 12),
+                    child: Column(
                       children: [
-                        Text("Quantity (approx.)"),
-                        Spacer(),
-                        Text(
-                            "${ad.approxQuantity ?? '-'} ${ad.quantityType ?? ''}"),
+                        Row(
+                          children: [
+                            Image.asset("assets/pro.png"),
+                            buildHSpacer(20),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                _buildText1(title: 'Rice', size: 18),
+                                _buildText1(
+                                    title: 'Variety :  Wheat G1', size: 11),
+                                _buildText1(
+                                    title:
+                                        "Location : ${ad.location.join(', ')}",
+                                    size: 11),
+                              ],
+                            ),
+                            const Spacer(),
+                            CircleAvatar(
+                              radius: Adaptive.w(5),
+                              backgroundColor: const Color(0xffD9D9D9),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.favorite,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            )
+                          ],
+                        ),
+                        buildVSpacer(10),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            children: [
+                              _buildText1(title: "Quantity (approx.)"),
+                              const Spacer(),
+                              _buildText1(
+                                  title:
+                                      "${ad.approxQuantity ?? ''} ${ad.quantityType ?? ''}"),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          decoration: const BoxDecoration(
+                            color: Color(0xffF4BC1C),
+                          ),
+                          height: 1,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            children: [
+                              _buildText1(title: "Min-Price (approx.)"),
+                              const Spacer(),
+                              _buildText1(
+                                  title: "₹ ${ad.minPriceApprox ?? ''}"),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          decoration: const BoxDecoration(
+                            color: Color(0xffF4BC1C),
+                          ),
+                          height: 1,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            children: [
+                              _buildText1(title: "Total Cost (approx.)"),
+                              const Spacer(),
+                              _buildText1(
+                                  title: "₹ ${ad.totalCostApprox ?? ''}"),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xffF4BC1C),
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: _buildText(
+                                title:
+                                    "Description : ${"ad.description" ?? 'No description'}",
+                                size: 11.px),
+                          ),
+                        ),
+                        buildVSpacer(20),
                       ],
                     ),
-                    Container(
-                      color: Color(0xffF4BC1C),
-                      height: 1,
-                    ),
-                    Row(
-                      children: [
-                        Text("Min-Price (approx.)"),
-                        Spacer(),
-                        Text("₹ ${ad.minPriceApprox ?? '-'}"),
-                      ],
-                    ),
-                    Container(
-                      color: Color(0xffF4BC1C),
-                      height: 1,
-                    ),
-                    Row(
-                      children: [
-                        Text("Total Cost (approx.)"),
-                        Spacer(),
-                        Text("₹ ${ad.totalCostApprox ?? '-'}"),
-                      ],
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Color(0xffF4BC1C),
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      margin: EdgeInsets.only(top: 8),
-                      padding: EdgeInsets.all(8),
-                      child: Text(
-                        "Description : ${ 'No description'}",
-                        style: TextStyle(fontSize: 11),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           );
@@ -520,6 +614,29 @@ class _SaleAddScreenState extends State<SaleAddScreen> {
             color: color ?? Colors.black),
       ),
     );
+  }
+
+  Widget _buildText1(
+      {required String title,
+      double? size,
+      FontWeight? fontWeight,
+      Color? color}) {
+    return Align(
+      // alignment: Alignment.centerLeft,
+      child: Text(
+        title,
+        style: GoogleFonts.lato(
+            fontSize: size ?? 14,
+            fontWeight: fontWeight ?? FontWeight.w400,
+            // fontFamily: 'Poppins',
+            color: color ?? Colors.black),
+      ),
+    );
+  }
+
+  String _formatPostedDate(DateTime? date) {
+    if (date == null) return '-';
+    return DateFormat('dd-MMMM-yy').format(date); // e.g., 05-April-24
   }
 
   Widget _buildTab(SelectedTab tab, String title, String headerText) {

@@ -35,6 +35,48 @@ class _MyAdonTapScreenState extends State<MyAdonTapScreen> {
   }
 
   bool value = false;
+  DateTime? _fromDate;
+  DateTime? _toDate;
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return '';
+    return '${date.day.toString().padLeft(2, '0')}-${date.month.toString().padLeft(2, '0')}-${date.year}';
+  }
+
+  Future<void> _pickFromDate(BuildContext context) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _fromDate ?? now,
+      firstDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year + 5),
+    );
+    if (picked != null) {
+      setState(() {
+        _fromDate = picked;
+        if (_toDate != null &&
+            (_toDate!.isBefore(_fromDate!) ||
+                _toDate!.isAfter(_fromDate!.add(Duration(days: 31))))) {
+          _toDate = null;
+        }
+      });
+    }
+  }
+
+  Future<void> _pickToDate(BuildContext context) async {
+    if (_fromDate == null) return;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _toDate ?? _fromDate!.add(Duration(days: 1)),
+      firstDate: _fromDate!,
+      lastDate: _fromDate!.add(Duration(days: 31)),
+    );
+    if (picked != null) {
+      setState(() {
+        _toDate = picked;
+      });
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -182,14 +224,22 @@ class _MyAdonTapScreenState extends State<MyAdonTapScreen> {
                     SizedBox(
                       width: Adaptive.w(35),
                       height: Adaptive.h(6),
-                      child: const TextField(
-                        decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                                borderSide: BorderSide(color: Colors.white)),
-                            suffixIcon: Icon(
-                              Icons.calendar_month_outlined,
-                              color: Colors.white,
-                            )),
+                      child: GestureDetector(
+                        onTap: () => _pickFromDate(context),
+                        child: AbsorbPointer(
+                          child: TextFormField(
+                            readOnly: true,
+                            enableInteractiveSelection: false,
+                            showCursor: false,
+                            decoration: InputDecoration(
+                              hintText: "Select From Date",
+                              border: OutlineInputBorder(),
+                              suffixIcon: Icon(Icons.calendar_today, color: Colors.white),
+                            ),
+                            controller: TextEditingController(text: _formatDate(_fromDate)),
+                            onTap: null, // disables keyboard
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -208,16 +258,22 @@ class _MyAdonTapScreenState extends State<MyAdonTapScreen> {
                     SizedBox(
                       width: Adaptive.w(35),
                       height: Adaptive.h(6),
-                      child: const TextField(
-                        decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                                borderSide: BorderSide(
-                              color: Colors.white,
-                            )),
-                            suffixIcon: Icon(
-                              Icons.calendar_month_outlined,
-                              color: Colors.white,
-                            )),
+                      child: GestureDetector(
+                        onTap: _fromDate == null ? null : () => _pickToDate(context),
+                        child: AbsorbPointer(
+                          child: TextFormField(
+                            readOnly: true,
+                            enableInteractiveSelection: false,
+                            showCursor: false,
+                            decoration: InputDecoration(
+                              hintText: _fromDate == null ? "Select From Date First" : "Select To Date",
+                              border: OutlineInputBorder(),
+                              suffixIcon: Icon(Icons.calendar_today, color: Colors.white),
+                            ),
+                            controller: TextEditingController(text: _formatDate(_toDate)),
+                            onTap: null, // disables keyboard
+                          ),
+                        ),
                       ),
                     ),
                   ],

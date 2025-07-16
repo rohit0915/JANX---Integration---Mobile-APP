@@ -7,12 +7,21 @@ import 'package:jan_x/sale_ads/category_screen/category_screen.dart';
 import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
+import 'package:get/get.dart';
+import 'package:jan_x/services/sale_ad_service.dart';
+import 'package:jan_x/model/sell_ad_models.dart';
+import 'package:intl/intl.dart';
 
 class HomeBuyerAddScreen extends StatelessWidget {
   const HomeBuyerAddScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final SaleAdService saleAdService = Get.find<SaleAdService>();
+    // Fetch sale ads on first build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      saleAdService.getSalesAds();
+    });
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -69,9 +78,24 @@ class HomeBuyerAddScreen extends StatelessWidget {
                   ],
                 ),
                 buildVSpacer(3.h),
-                buyAddMethod(context),
+                Obx(() {
+                  if (saleAdService.isLoading.value) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+                  if (saleAdService.error.value.isNotEmpty) {
+                    return Center(
+                        child: Text('Error: ' + saleAdService.error.value));
+                  }
+                  if (saleAdService.saleAds.isEmpty) {
+                    return Center(child: Text('No ads found.'));
+                  }
+                  return Column(
+                    children: saleAdService.saleAds
+                        .map((ad) => buyAddMethod(context, ad))
+                        .toList(),
+                  );
+                }),
                 buildVSpacer(3.h),
-                buyAddMethod(context)
               ],
             ),
           ),
@@ -124,7 +148,7 @@ class HomeBuyerAddScreen extends StatelessWidget {
     );
   }
 
-  Padding buyAddMethod(BuildContext context) {
+  Padding buyAddMethod(BuildContext context, SellAdResponse ad) {
     return Padding(
       padding: const EdgeInsets.all(10),
       child: Stack(
@@ -184,24 +208,26 @@ class HomeBuyerAddScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.start,
                               children: [
-                                _buildText1(title: "Wheat", size: 18),
+                                _buildText1(title: 'Rice', size: 18),
                                 _buildText1(
-                                    title: "Variety :  v1,Sharbati", size: 11),
+                                    title: 'Variety :  Wheat G1', size: 11),
                                 _buildText1(
-                                    title: "Location : Jabalpur", size: 11),
+                                    title:
+                                        "Location : ${ad.location.join(', ')}",
+                                    size: 11),
                               ],
                             ),
-                              const Spacer(),
-                        CircleAvatar(
-                          radius: Adaptive.w(5),
-                          backgroundColor: const Color(0xffD9D9D9),
-                          child: const Center(
-                            child: Icon(
-                              Icons.favorite,
-                              color: Colors.white,
-                            ),
-                          ),
-                        )
+                            const Spacer(),
+                            CircleAvatar(
+                              radius: Adaptive.w(5),
+                              backgroundColor: const Color(0xffD9D9D9),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.favorite,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            )
                           ],
                         ),
                         buildVSpacer(10),
@@ -211,7 +237,9 @@ class HomeBuyerAddScreen extends StatelessWidget {
                             children: [
                               _buildText1(title: "Quantity (approx.)"),
                               const Spacer(),
-                              _buildText1(title: "100 QT"),
+                              _buildText1(
+                                  title:
+                                      "${ad.approxQuantity ?? ''} ${ad.quantityType ?? ''}"),
                             ],
                           ),
                         ),
@@ -227,7 +255,8 @@ class HomeBuyerAddScreen extends StatelessWidget {
                             children: [
                               _buildText1(title: "Min-Price (approx.)"),
                               const Spacer(),
-                              _buildText1(title: "₹ 2,400.00"),
+                              _buildText1(
+                                  title: "₹ ${ad.minPriceApprox ?? ''}"),
                             ],
                           ),
                         ),
@@ -243,7 +272,8 @@ class HomeBuyerAddScreen extends StatelessWidget {
                             children: [
                               _buildText1(title: "Total Cost (approx.)"),
                               const Spacer(),
-                              _buildText1(title: "₹ 2,40,000.00"),
+                              _buildText1(
+                                  title: "₹ ${ad.totalCostApprox ?? ''}"),
                             ],
                           ),
                         ),
@@ -255,8 +285,7 @@ class HomeBuyerAddScreen extends StatelessWidget {
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: _buildText(
-                                title:
-                                    "Description : Turmeric, a plant in the ginger family, is native to South east Asia and is grown commercially in that region.",
+                                title: "Description : No description",
                                 size: 11.px),
                           ),
                         ),
@@ -285,12 +314,12 @@ class HomeBuyerAddScreen extends StatelessWidget {
                     scale: 0.8,
                   ),
                   buildHSpacer(5),
-                  const Column(
+                  Column(
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Buy ID : 2404-222819",
+                        "Buy ID : ${ad.buyId ?? '-'}",
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -298,7 +327,10 @@ class HomeBuyerAddScreen extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        "Posted Date : 05-April-24",
+                        "Posted Date : " +
+                            (ad.createdAt != null
+                                ? DateFormat('dd-MMMM-yy').format(ad.createdAt!)
+                                : '-'),
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 10,

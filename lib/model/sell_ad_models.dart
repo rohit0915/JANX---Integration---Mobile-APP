@@ -1,6 +1,8 @@
 class SellAdResponse {
   final String cropType;
+  final String? cropName;
   final String variety;
+  final String? varietyName;
   final DateTime? startDate;
   final DateTime? endDate;
   final int? approxQuantity;
@@ -11,10 +13,14 @@ class SellAdResponse {
   final List<String> location;
   final List<OtherFeature>? otherFeatures;
   final bool? mitraVerification;
+  final DateTime? createdAt;
+  final String? buyId;
 
   SellAdResponse({
     required this.cropType,
+    this.cropName,
     required this.variety,
+    this.varietyName,
     this.startDate,
     this.endDate,
     this.approxQuantity,
@@ -25,12 +31,16 @@ class SellAdResponse {
     required this.location,
     this.otherFeatures,
     this.mitraVerification,
+    this.createdAt,
+    this.buyId,
   });
 
   factory SellAdResponse.fromJson(Map<String, dynamic> json) {
     return SellAdResponse(
       cropType: json['crop_type'] ?? '',
+      cropName: json['crop_name'] ?? json['cropTypeName'] ?? null,
       variety: json['variety'] ?? '',
+      varietyName: json['variety_name'] ?? null,
       startDate: json['start_date'] != null
           ? DateTime.parse(json['start_date'])
           : null,
@@ -48,12 +58,17 @@ class SellAdResponse {
               .toList()
           : null,
       mitraVerification: json['mitra_verification'],
+      createdAt:
+          json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
+      buyId: json['buyId'] ?? json['_id'],
     );
   }
 
   Map<String, dynamic> toJson() => {
         'crop_type': cropType,
+        'crop_name': cropName,
         'variety': variety,
+        'variety_name': varietyName,
         'start_date': startDate?.toUtc().toIso8601String(),
         'end_date': endDate?.toUtc().toIso8601String(),
         'approx_quantity': approxQuantity,
@@ -64,6 +79,8 @@ class SellAdResponse {
         'location': location,
         'other_features': otherFeatures?.map((e) => e.toJson()).toList(),
         'mitra_verification': mitraVerification,
+        'createdAt': createdAt?.toUtc().toIso8601String(),
+        'buyId': buyId,
       };
 }
 

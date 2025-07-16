@@ -98,13 +98,14 @@ class PostSellAdService extends GetxService {
         final decoded = jsonDecode(response.body);
         final List<dynamic> data = decoded is List
             ? decoded
-            : (decoded['data'] is List ? decoded['data'] : []);
+            : (decoded['ads'] is List ? decoded['ads'] : []);
         sellAds.value = data.map((e) => SellAdResponse.fromJson(e)).toList();
         error.value = '';
       } else {
         error.value = 'Failed to load ads: ${response.statusCode}';
         sellAds.clear();
       }
+      print(response.body);
       return sellAds;
     } catch (e) {
       isLoading.value = false;
@@ -220,27 +221,38 @@ class PostSellAdService extends GetxService {
   }
 
   // Add a public method to handle Sell Ad creation from the UI
-  Future<void> createSellAdPost({
+  Future<http.Response?> createSellAdPost({
     required BuildContext context,
     required String? selectedCropId,
     required String? selectedVarietyId,
+    required String cropName,
+    required String varietyName,
     required List<Map<String, String>> varietyTypes,
     required bool mitraVerification,
     required bool userIsMitra,
+    DateTime? startDate,
+    DateTime? endDate,
+    int? approxQuantity,
+    String? quantityType,
+    int? minPriceApprox,
+    int? totalCostApprox,
+    List<String>? productImages,
+    List<String>? location,
+    List<OtherFeature>? otherFeatures,
   }) async {
     if ((selectedCropId == null || selectedCropId.isEmpty) ||
         (selectedVarietyId == null || selectedVarietyId.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please select both Crop Type and Variety.')),
       );
-      return;
+      return null;
     }
     if (!varietyTypes.any((v) => v['id'] == selectedVarietyId)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text('Selected variety does not match selected crop.')),
       );
-      return;
+      return null;
     }
     if (mitraVerification && !userIsMitra) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -248,14 +260,22 @@ class PostSellAdService extends GetxService {
             content: Text(
                 'You must complete Mitra registration before enabling Mitra verification.')),
       );
-      return;
+      return null;
     }
     final ad = SellAdResponse(
       cropType: selectedCropId ?? '',
-      variety: selectedVarietyId ?? '665f1e4b8b3e2c0012a4d1b1',
-      minPriceApprox: 1000,
-      totalCostApprox: 5000,
-      location: ['Test Location'],
+      cropName: "cropName",
+      variety: selectedVarietyId ?? '',
+      varietyName: varietyName,
+      startDate: startDate,
+      endDate: endDate,
+      approxQuantity: approxQuantity,
+      quantityType: quantityType,
+      minPriceApprox: minPriceApprox ?? 0,
+      totalCostApprox: totalCostApprox ?? 0,
+      productImages: productImages ?? [],
+      location: location ?? ['Bangalore'],
+      otherFeatures: otherFeatures,
       mitraVerification: userIsMitra ? mitraVerification : false,
     );
     final response = await createSellAd(ad);
@@ -263,5 +283,6 @@ class PostSellAdService extends GetxService {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Status: ${response.statusCode}')),
     );
+    return response;
   }
 }

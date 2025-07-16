@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:jan_x/home_screen/home_screen.dart';
 import 'package:jan_x/post_buy_ads/tap_on_post_buy/tap_on_post_by_screen.dart';
 import 'package:jan_x/post_sell_ad/add_location/add_location_screen.dart';
 import 'package:jan_x/published_add/published_buy_screen.dart';
@@ -10,6 +11,8 @@ import 'package:responsive_sizer/responsive_sizer.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:jan_x/services/post_buy_ad_service.dart';
+import 'package:jan_x/services/post_sell_ad_service.dart';
+import 'package:jan_x/model/sell_ad_models.dart';
 
 class NewSaleRequestWidget extends StatefulWidget {
   const NewSaleRequestWidget({super.key});
@@ -27,7 +30,60 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
   bool isLoading = false;
   String? error;
   final PostBuyAdService postBuyAdService = Get.find<PostBuyAdService>();
+  final PostSellAdService postSellAdService = Get.find<PostSellAdService>();
   final box = GetStorage();
+
+  // Add controllers for quantity, min price, total cost, and quantity type
+  final TextEditingController approxQuantityController =
+      TextEditingController();
+  final TextEditingController minPriceController = TextEditingController();
+  final TextEditingController totalCostController = TextEditingController();
+  final TextEditingController quantityTypeController =
+      TextEditingController(text: "QT");
+
+  DateTime? _fromDate;
+  DateTime? _toDate;
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return '';
+    return '${date.day.toString().padLeft(2, '0')}-${date.month.toString().padLeft(2, '0')}-${date.year}';
+  }
+
+  Future<void> _pickFromDate(BuildContext context) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _fromDate ?? now,
+      firstDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year + 5),
+    );
+    if (picked != null) {
+      setState(() {
+        _fromDate = picked;
+        // Clear 'To' date if it is before 'From' or more than one month after
+        if (_toDate != null &&
+            (_toDate!.isBefore(_fromDate!) ||
+                _toDate!.isAfter(_fromDate!.add(Duration(days: 31))))) {
+          _toDate = null;
+        }
+      });
+    }
+  }
+
+  Future<void> _pickToDate(BuildContext context) async {
+    if (_fromDate == null) return;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _toDate ?? _fromDate!.add(Duration(days: 1)),
+      firstDate: _fromDate!,
+      lastDate: _fromDate!.add(Duration(days: 31)),
+    );
+    if (picked != null) {
+      setState(() {
+        _toDate = picked;
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -82,8 +138,8 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
 
   void _handleCropChange(String? val) {
     setState(() => selectedCropId = val);
-    if (val != null) _fetchVarietiesForCrop(val); 
-    selectedVarietyId = null; 
+    if (val != null) _fetchVarietiesForCrop(val);
+    selectedVarietyId = null;
   }
 
   void _handleVarietyChange(String? val) {
@@ -91,23 +147,61 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
   }
 
   Future<void> _submitBuyAd() async {
+    // Validate required fields
     if ((selectedCropId == null || selectedCropId!.isEmpty) ||
-        (selectedVarietyId == null || selectedVarietyId!.isEmpty)) {
+        (selectedVarietyId == null || selectedVarietyId!.isEmpty) ||
+        approxQuantityController.text.isEmpty ||
+        minPriceController.text.isEmpty ||
+        totalCostController.text.isEmpty ||
+        _fromDate == null ||
+        _toDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Please select both Crop Type and Variety.')));
+        SnackBar(content: Text('Please fill all required fields.')),
+      );
       return;
     }
     setState(() {
       isLoading = true;
     });
-    await postBuyAdService.createBuyAdPost(
-      context: context,
-      selectedCropId: selectedCropId,
-      selectedVarietyId: selectedVarietyId,
-    );
-    setState(() {
-      isLoading = false;
-    });
+    try {
+      final response = await postSellAdService.createSellAd(
+        SellAdResponse(
+          cropType: selectedCropId ?? '',
+          variety: selectedVarietyId ?? '',
+          startDate: _fromDate,
+          endDate: _toDate,
+          approxQuantity: int.tryParse(approxQuantityController.text),
+          quantityType: quantityTypeController.text,
+          minPriceApprox: int.tryParse(minPriceController.text) ?? 0,
+          totalCostApprox: int.tryParse(totalCostController.text) ?? 0,
+          productImages: [],
+          location: ["Bangalore"],
+          otherFeatures: [],
+          mitraVerification: false,
+        ),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HomeScreen(),
+          ),
+          (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create ad. Please try again.')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   bool isOtherServiceClicked = false;
@@ -168,14 +262,24 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
                       SizedBox(
                         width: Adaptive.w(35),
                         height: Adaptive.h(6),
-                        child: const TextField(
-                          decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.white)),
-                              suffixIcon: Icon(
-                                Icons.calendar_month_outlined,
-                                color: Colors.white,
-                              )),
+                        child: GestureDetector(
+                          onTap: () => _pickFromDate(context),
+                          child: AbsorbPointer(
+                            child: TextFormField(
+                              readOnly: true,
+                              enableInteractiveSelection: false,
+                              showCursor: false,
+                              decoration: InputDecoration(
+                                hintText: "Select From Date",
+                                border: OutlineInputBorder(),
+                                suffixIcon: Icon(Icons.calendar_today,
+                                    color: Color(0xffF4BC1C)),
+                              ),
+                              controller: TextEditingController(
+                                  text: _formatDate(_fromDate)),
+                              onTap: null, // disables keyboard
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -194,16 +298,28 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
                       SizedBox(
                         width: Adaptive.w(35),
                         height: Adaptive.h(6),
-                        child: const TextField(
-                          decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                color: Colors.white,
-                              )),
-                              suffixIcon: Icon(
-                                Icons.calendar_month_outlined,
-                                color: Colors.white,
-                              )),
+                        child: GestureDetector(
+                          onTap: _fromDate == null
+                              ? null
+                              : () => _pickToDate(context),
+                          child: AbsorbPointer(
+                            child: TextFormField(
+                              readOnly: true,
+                              enableInteractiveSelection: false,
+                              showCursor: false,
+                              decoration: InputDecoration(
+                                hintText: _fromDate == null
+                                    ? "Select From Date First"
+                                    : "Select To Date",
+                                border: OutlineInputBorder(),
+                                suffixIcon: Icon(Icons.calendar_today,
+                                    color: Color(0xffF4BC1C)),
+                              ),
+                              controller: TextEditingController(
+                                  text: _formatDate(_toDate)),
+                              onTap: null, // disables keyboard
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -213,62 +329,42 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
               buildVSpacer(20),
               _buildText(
                   title: "Min Price (approx) ", color: const Color(0xffF4BC1C)),
-              buildCustomTextField3(hintText: ""),
+              buildCustomTextField3(
+                  hintText: "",
+                  controller: minPriceController,
+                  prefix: quantityTypeController.text),
               //
               buildVSpacer(20),
               _buildText(
                   title: "Quantity (approx) ", color: const Color(0xffF4BC1C)),
-              buildCustomTextField3(hintText: "Select Quantity", prefix: "QT"),
-              Row(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xffF4BC1C),
-                      borderRadius: BorderRadius.circular(20.0),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: _buildTextHeader(title: "Ton", size: 12),
-                    ),
-                  ),
-                  buildHSpacer(5),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20.0),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 8.0, horizontal: 16),
-                    child: _buildTextHeader(title: "QT", size: 12),
-                  ),
-                  buildHSpacer(5),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xffF4BC1C),
-                      borderRadius: BorderRadius.circular(20.0),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: _buildTextHeader(title: "Kg", size: 12),
-                    ),
-                  ),
-                  buildHSpacer(5),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xffF4BC1C),
-                      borderRadius: BorderRadius.circular(20.0),
-                    ),
-                    padding: EdgeInsets.symmetric(
-                        horizontal: Adaptive.w(4), vertical: Adaptive.h(1)),
-                    child: _buildTextHeader(title: "Packet", size: 12),
-                  ),
-                ],
+              buildCustomTextField3(
+                hintText: "Select Quantity",
+                controller: approxQuantityController,
+                prefix: quantityTypeController.text,
               ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                child: Row(
+                  children: [
+                    _buildQuantityTypeButton("Ton"),
+                    buildHSpacer(5),
+                    _buildQuantityTypeButton("QT"),
+                    buildHSpacer(5),
+                    _buildQuantityTypeButton("Kg"),
+                    buildHSpacer(5),
+                    _buildQuantityTypeButton("Packet"),
+                  ],
+                ),
+              ),
+
               buildVSpacer(20),
               _buildText(
                   title: "Total Cost (approx) ",
                   color: const Color(0xffF4BC1C)),
-              buildCustomTextField3(hintText: ""),
+              buildCustomTextField3(
+                  hintText: "",
+                  controller: totalCostController,
+                  prefix: quantityTypeController.text),
               buildVSpacer(20),
               _buildText(
                   title: "Other Details", color: const Color(0xffF4BC1C)),
@@ -667,14 +763,24 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
                 SizedBox(
                   width: Adaptive.w(35),
                   height: Adaptive.h(6),
-                  child: const TextField(
-                    decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white)),
-                        suffixIcon: Icon(
-                          Icons.calendar_month_outlined,
-                          color: Colors.white,
-                        )),
+                  child: GestureDetector(
+                    onTap: () => _pickFromDate(context),
+                    child: AbsorbPointer(
+                      child: TextFormField(
+                        readOnly: true,
+                        enableInteractiveSelection: false,
+                        showCursor: false,
+                        decoration: InputDecoration(
+                          hintText: "Select From Date",
+                          border: OutlineInputBorder(),
+                          suffixIcon: Icon(Icons.calendar_today,
+                              color: Color(0xffF4BC1C)),
+                        ),
+                        controller:
+                            TextEditingController(text: _formatDate(_fromDate)),
+                        onTap: null, // disables keyboard
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -693,26 +799,53 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
                 SizedBox(
                   width: Adaptive.w(35),
                   height: Adaptive.h(6),
-                  child: const TextField(
-                    decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                            borderSide: BorderSide(
-                          color: Colors.white,
-                        )),
-                        suffixIcon: Icon(
-                          Icons.calendar_month_outlined,
-                          color: Colors.white,
-                        )),
+                  child: GestureDetector(
+                    onTap:
+                        _fromDate == null ? null : () => _pickToDate(context),
+                    child: AbsorbPointer(
+                      child: TextFormField(
+                        readOnly: true,
+                        enableInteractiveSelection: false,
+                        showCursor: false,
+                        decoration: InputDecoration(
+                          hintText: _fromDate == null
+                              ? "Select From Date First"
+                              : "Select To Date",
+                          border: OutlineInputBorder(),
+                          suffixIcon: Icon(Icons.calendar_today,
+                              color: Color(0xffF4BC1C)),
+                        ),
+                        controller:
+                            TextEditingController(text: _formatDate(_toDate)),
+                        onTap: null, // disables keyboard
+                      ),
+                    ),
                   ),
                 ),
               ],
-            )
+            ),
           ],
         ),
         buildVSpacer(20),
         _buildText(title: "Quantity (approx) ", color: const Color(0xffF4BC1C)),
         buildCustomTextField3(
           hintText: "Select Quantity",
+          controller: approxQuantityController,
+          prefix: quantityTypeController.text,
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18.0),
+          child: Row(
+            children: [
+              _buildQuantityTypeButton("Ton"),
+              buildHSpacer(5),
+              _buildQuantityTypeButton("QT"),
+              buildHSpacer(5),
+              _buildQuantityTypeButton("Kg"),
+              buildHSpacer(5),
+              _buildQuantityTypeButton("Packet"),
+            ],
+          ),
         ),
         Row(
           children: [
@@ -765,11 +898,17 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
         buildVSpacer(20),
         _buildText(
             title: "Min Price (approx) ", color: const Color(0xffF4BC1C)),
-        buildCustomTextField3(hintText: ""),
+        buildCustomTextField3(
+            hintText: "",
+            controller: minPriceController,
+            prefix: quantityTypeController.text),
         buildVSpacer(20),
         _buildText(
             title: "Total Cost (approx) ", color: const Color(0xffF4BC1C)),
-        buildCustomTextField3(hintText: ""),
+        buildCustomTextField3(
+            hintText: "",
+            controller: totalCostController,
+            prefix: quantityTypeController.text),
         buildVSpacer(20),
         _buildText(title: "Add Product Images", color: const Color(0xffF4BC1C)),
         buildVSpacer(10),
@@ -986,18 +1125,36 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
         buildVSpacer(10.h),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18.0),
-          child: CustomButton(
-              text: "Submit",
-              onPressed: () {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const PublishedBuyScreen(),
-                    ));
-              }),
+          child: CustomButton(text: "Submit", onPressed: _submitBuyAd),
         ),
         buildVSpacer(18.h)
       ],
+    );
+  }
+
+  Widget _buildQuantityTypeButton(String type) {
+    final isSelected = quantityTypeController.text == type;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          quantityTypeController.text = type;
+        });
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xffF4BC1C) : Colors.white,
+          borderRadius: BorderRadius.circular(20.0),
+          border: Border.all(color: const Color(0xffF4BC1C)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Text(
+          type,
+          style: TextStyle(
+            color: isSelected ? Colors.black : Colors.grey[800],
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
     );
   }
 }

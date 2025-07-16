@@ -152,18 +152,35 @@ class _AadharCardDetailsScreenState extends State<AadharCardDetailsScreen> {
     if (response.statusCode == 200) {
       try {
         final responseData = jsonDecode(response.body);
-        final otp = responseData['data'] ?? responseData['data']?['otp'];
+        String? otp;
+        if (responseData['data'] is Map &&
+            responseData['data']['otp'] != null) {
+          otp = responseData['data']['otp'].toString();
+        } else if (responseData['data'] != null &&
+            responseData['data'] is String) {
+          otp = responseData['data'].toString();
+        }
         if (otp != null) {
-          print('Aadhaar OTP: ' + otp.toString());
+          print('Aadhaar OTP: ' + otp);
         } else {
           print('Aadhaar OTP not found in response.');
         }
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Aadhaar KYC submitted successfully.')));
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (context) => OtpAadharCardScreen(otp: otp ?? '')),
+        );
       } catch (e) {
         print('Error parsing OTP from response: ' + e.toString());
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Aadhaar KYC submitted successfully.')));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => OtpAadharCardScreen(otp: '')),
+        );
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Aadhaar KYC submitted successfully.')));
-      Get.back();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to submit Aadhaar KYC.')));
