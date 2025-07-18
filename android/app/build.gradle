@@ -22,6 +22,12 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace "com.example.jan_x"
     compileSdkVersion 35
@@ -52,23 +58,23 @@ android {
         multiDexEnabled true
     }
 
-//    signingConfigs {
-//        release {
-//            storeFile file("upload-keystore.jks")
-//            storePassword "android"
-//            keyAlias "upload"
-//            keyPassword "android"
-//        }
-//        debug{
-//            storeFile file("upload-keystore.jks")
-//            storePassword "android"
-//            keyAlias "upload"
-//            keyPassword "android"
-//        }
-//    }
+    signingConfigs {
+        release {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile file(keystoreProperties['storeFile'])
+            storePassword keystoreProperties['storePassword']
+        }
+        debug{
+            // storeFile file("upload-keystore.jks")
+            // storePassword "android"
+            // keyAlias "upload"
+            // keyPassword "android"
+        }
+    }
 
     buildTypes {
-        debug {
+        release {
             signingConfig signingConfigs.debug
         }
     }

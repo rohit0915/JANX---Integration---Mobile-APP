@@ -34,7 +34,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  bool isMitraRegistered = false;
   bool isLoadingMitra = true;
 
   @override
@@ -53,16 +52,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       isLoadingMitra = true;
     });
-    final mitraService = Get.find<MitraService>();
-    await mitraService.getMitraProfile();
+    final kycService = Get.find<KycService>();
+    // Simulate async if needed, or remove await if not needed
+    await Future.delayed(Duration(milliseconds: 100));
     setState(() {
-      isMitraRegistered = mitraService.mitraProfiles.isNotEmpty;
       isLoadingMitra = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoadingMitra) {
+      return Center(child: CircularProgressIndicator());
+    }
+    final kycService = Get.find<KycService>();
+    final isMitraRegistered = kycService.isMitraRegistered;
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
@@ -420,7 +424,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           title: "Mitra Registration",
                           subTitle: "Complete your KYC"),
                     ),
-                    // Mitra Profile tile (greyed out and unclickable if not registered)
                     AbsorbPointer(
                       absorbing: !isMitraRegistered,
                       child: Opacity(
@@ -435,7 +438,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           const MitraProfileDetailsScreen(),
                                     ),
                                   );
-                                  _checkMitraStatus(); // Refresh status after returning
+                                  _checkMitraStatus();
                                 }
                               : null,
                           child: listTileMethod(

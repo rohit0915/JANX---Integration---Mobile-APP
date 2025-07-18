@@ -7,6 +7,8 @@ const String baseUrl = 'https://ramraj-janx-backend-code.vercel.app/api';
 
 class KycService extends GetxController {
   final box = GetStorage();
+  // Add this boolean to control Mitra Profile activation
+  bool isMitraRegistered = false;
   Future<http.Response> getKycProfile() async {
     final token = box.read('token');
     final response = await http.get(
@@ -131,6 +133,8 @@ class KycService extends GetxController {
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
       box.write('mitra_registered', true);
+      isMitraRegistered =
+          true; // Set the boolean to true on successful registration
     }
     return response;
   }

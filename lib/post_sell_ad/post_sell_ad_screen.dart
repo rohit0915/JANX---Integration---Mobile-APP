@@ -28,7 +28,6 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:collection/collection.dart';
 
-
 // Move these to the top-level (outside of any class)
 enum SelectedTab { newSale, myAds, completed }
 
@@ -1044,12 +1043,14 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
                       List<OtherFeature> otherFeatures = [];
                       // TODO: Add logic to collect other features from the UI
 
-                      // Convert image to base64 if present
-
-                      List<String> productImages = [];
+                      // Upload image(s) and collect URLs
+                      List<String> uploadedImageUrls = [];
                       if (imageFile != null) {
-                        final bytes = await imageFile.readAsBytes();
-                        productImages.add(base64Encode(bytes));
+                        final url =
+                            await postSellAdService.uploadIdPicture(imageFile);
+                        if (url != null) {
+                          uploadedImageUrls.add(url);
+                        }
                       }
 
                       // Validation
@@ -1079,8 +1080,8 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
                         context: context,
                         selectedCropId: cropId,
                         selectedVarietyId: varietyId,
-                        cropName: "Rice",
-                        varietyName: "Wheat G1",
+                        cropName: cropName,
+                        varietyName: varietyName,
                         varietyTypes: varietyTypes,
                         mitraVerification: mitraVerification,
                         userIsMitra: userIsMitra,
@@ -1090,7 +1091,7 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
                         quantityType: quantityType,
                         minPriceApprox: minPrice,
                         totalCostApprox: totalCost,
-                        productImages: productImages,
+                        productImages: uploadedImageUrls, // <-- use URLs here
                         location: location,
                         otherFeatures: otherFeatures,
                       );
@@ -1400,7 +1401,7 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xffA76012),
+                      color: Colors.blue,
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(color: Colors.black26),
                     ),
@@ -1416,7 +1417,7 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "Buy ID : ${ad.buyId ?? '-'}",
+                              "Sell ID : ${ad.buyId ?? '-'}",
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,

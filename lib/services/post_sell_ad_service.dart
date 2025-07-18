@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
@@ -217,6 +218,27 @@ class PostSellAdService extends GetxService {
     } else {
       print('Failed to fetch crop varieties');
       throw Exception('Failed to fetch crop varieties');
+    }
+  }
+
+  Future<String?> uploadIdPicture(File imageFile) async {
+    final token = box.read('token');
+    final uri = Uri.parse('$baseUrl/users/upload-id-picture');
+    final request = http.MultipartRequest('PUT', uri)
+      ..headers['Authorization'] = 'Bearer $token'
+      ..files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200) {
+      
+      final decoded = jsonDecode(response.body);
+
+      return decoded['url'] ?? decoded['imageUrl'] ?? null;
+    } else {
+      print('Image upload failed: ${response.body}');
+      return null;
     }
   }
 

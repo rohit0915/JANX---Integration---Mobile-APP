@@ -13,6 +13,8 @@ import 'package:get_storage/get_storage.dart';
 import 'package:jan_x/services/post_buy_ad_service.dart';
 import 'package:jan_x/services/post_sell_ad_service.dart';
 import 'package:jan_x/model/sell_ad_models.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 
 class NewSaleRequestWidget extends StatefulWidget {
   const NewSaleRequestWidget({super.key});
@@ -33,13 +35,12 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
   final PostSellAdService postSellAdService = Get.find<PostSellAdService>();
   final box = GetStorage();
 
-  // Add controllers for quantity, min price, total cost, and quantity type
+
   final TextEditingController approxQuantityController =
       TextEditingController();
   final TextEditingController minPriceController = TextEditingController();
   final TextEditingController totalCostController = TextEditingController();
-  final TextEditingController quantityTypeController =
-      TextEditingController(text: "QT");
+  final TextEditingController quantityTypeController =TextEditingController(text: "QT");
 
   DateTime? _fromDate;
   DateTime? _toDate;
@@ -207,6 +208,18 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
   bool isOtherServiceClicked = false;
   bool isBuyRequestClicked = false;
   bool value = true;
+  List<File> selectedImages = [];
+
+  Future<void> pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        selectedImages.add(File(pickedFile.path));
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return isBuyRequestClicked == false
@@ -374,7 +387,33 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
               _buildText(
                   title: "Add Product Images", color: const Color(0xffF4BC1C)),
               buildVSpacer(10),
-              Image.asset("assets/add_image.png"),
+              GestureDetector(
+                onTap: pickImage,
+                child: Container(
+                  height: Adaptive.h(12),
+                  width: Adaptive.w(100),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Color(0xffF4BC1C)),
+                  ),
+                  child: selectedImages.isEmpty
+                      ? Center(
+                          child:
+                              Icon(Icons.add_a_photo, color: Color(0xffF4BC1C)))
+                      : ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: selectedImages
+                              .map((img) => Padding(
+                                    padding: const EdgeInsets.all(4.0),
+                                    child: Image.file(img,
+                                        width: 80,
+                                        height: 80,
+                                        fit: BoxFit.cover),
+                                  ))
+                              .toList(),
+                        ),
+                ),
+              ),
               buildVSpacer(20),
               GestureDetector(
                 onTap: () {
@@ -912,7 +951,30 @@ class _NewSaleRequestWidgetState extends State<NewSaleRequestWidget> {
         buildVSpacer(20),
         _buildText(title: "Add Product Images", color: const Color(0xffF4BC1C)),
         buildVSpacer(10),
-        Image.asset("assets/add_image.png"),
+        GestureDetector(
+          onTap: pickImage,
+          child: Container(
+            height: Adaptive.h(12),
+            width: Adaptive.w(100),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Color(0xffF4BC1C)),
+            ),
+            child: selectedImages.isEmpty
+                ? Center(
+                    child: Icon(Icons.add_a_photo, color: Color(0xffF4BC1C)))
+                : ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: selectedImages
+                        .map((img) => Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: Image.file(img,
+                                  width: 80, height: 80, fit: BoxFit.cover),
+                            ))
+                        .toList(),
+                  ),
+          ),
+        ),
         buildVSpacer(20),
         GestureDetector(
           onTap: () {

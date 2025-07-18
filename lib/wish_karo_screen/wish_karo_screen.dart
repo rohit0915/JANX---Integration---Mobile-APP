@@ -32,7 +32,7 @@ class _WishKaroSubmittedListState extends State<WishKaroSubmittedList> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final token = box.read('token');
-      if (token != null) wishkaroService.getWishlist(token);
+      wishkaroService.getWishlist();
     });
   }
 
@@ -77,6 +77,16 @@ class WishKaroScreen extends StatefulWidget {
 }
 
 class _WishKaroScreenState extends State<WishKaroScreen> {
+    final WishkaroService wishkaroService = Get.find<WishkaroService>();
+  final box = GetStorage();
+   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final token = box.read('token');
+      wishkaroService.getWishlist();
+    });
+  }
   @override
   bool isMyorderClicked = false;
   Widget build(BuildContext context) {
@@ -232,6 +242,7 @@ class _WishKaroScreenState extends State<WishKaroScreen> {
   }
 
   Column defaultMethodInWishKaro() {
+    final wishkaroService = Get.find<WishkaroService>();
     return Column(
       children: [
         Row(
@@ -317,15 +328,82 @@ class _WishKaroScreenState extends State<WishKaroScreen> {
           ],
         ),
         buildVSpacer(16.h),
-        Text(
-          'No data\nPlease add New Wish',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.lato(
-            fontWeight: FontWeight.w700,
-            fontSize: 26.px,
-            color: white,
-          ),
-        )
+        Obx(() {
+          if (wishkaroService.isLoading.value) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (wishkaroService.wishlist.isEmpty) {
+            return Text(
+              'No data\nPlease add New Wish',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.lato(
+                fontWeight: FontWeight.w700,
+                fontSize: 26.px,
+                color: white,
+              ),
+            );
+          }
+          // If there is data, show the custom container for each wish
+          return ListView.builder(
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            itemCount: wishkaroService.wishlist.length,
+            itemBuilder: (context, index) {
+              final wish = wishkaroService.wishlist[index];
+              return Padding(
+                padding: const EdgeInsets.all(10),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Image.asset("assets/pro.png"),
+                              const SizedBox(width: 20),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  Text(wish.variety ?? 'No Title',
+                                      style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold)),
+                                  Text('Variety :  ${wish.variety ?? "-"}',
+                                      style: const TextStyle(fontSize: 11)),
+                                  Text(
+                                      "Location : ${wish.location?.join(', ') ?? '-'}",
+                                      style: const TextStyle(fontSize: 11)),
+                                ],
+                              ),
+                              const Spacer(),
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundColor: const Color(0xffD9D9D9),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.favorite,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    // ... (add Positioned widget if needed)
+                  ],
+                ),
+              );
+            },
+          );
+        }),
       ],
     );
   }

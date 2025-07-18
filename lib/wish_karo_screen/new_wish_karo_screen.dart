@@ -7,6 +7,12 @@ import 'package:jan_x/utilz/colors.dart';
 import 'package:jan_x/widgets/app_widgets.dart';
 import 'package:jan_x/widgets/custom_button.dart';
 import 'package:responsive_sizer/responsive_sizer.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:get/get.dart';
+import 'package:jan_x/services/wishkaro_service.dart';
 
 class NewWishKaroScreen extends StatefulWidget {
   const NewWishKaroScreen({super.key});
@@ -14,13 +20,203 @@ class NewWishKaroScreen extends StatefulWidget {
   @override
   State<NewWishKaroScreen> createState() => _NewWishKaroScreenState();
 }
- bool isClicked1=false;
- bool isClicked2=false;
+
+bool isClicked1 = false;
+bool isClicked2 = false;
 
 class _NewWishKaroScreenState extends State<NewWishKaroScreen> {
   bool isOtherServiceClicked = false;
   bool isClickedNext = false;
   SelectedTab selectedTab = SelectedTab.defaults;
+  List<dynamic> wishCategories = [];
+  List<dynamic> wishSubCategories = [];
+  List<dynamic> wishBrands = [];
+  String? selectedCategoryId;
+  String? selectedSubCategoryId;
+  String? selectedBrandId;
+  DateTime? fromDate;
+  DateTime? toDate;
+  List<File> selectedImages = [];
+  bool isLoadingCategories = false;
+  bool isLoadingSubCategories = false;
+  bool isLoadingBrands = false;
+  final WishkaroService wishkaroService = Get.find<WishkaroService>();
+  String? selectedQuantityType;
+  final TextEditingController productDetails = TextEditingController();
+  final TextEditingController quantityController = TextEditingController();
+  final TextEditingController minPriceController = TextEditingController();
+  final TextEditingController totalCostController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    fetchWishCategories();
+  }
+
+  Future<void> fetchWishCategories() async {
+    setState(() {
+      isLoadingCategories = true;
+    });
+    try {
+      wishCategories = await wishkaroService.fetchWishCategories();
+    } catch (e) {
+      wishCategories = [];
+    }
+    setState(() {
+      isLoadingCategories = false;
+    });
+  }
+
+  Future<void> fetchWishSubCategories(String categoryId) async {
+    setState(() {
+      isLoadingSubCategories = true;
+    });
+    try {
+      wishSubCategories =
+          await wishkaroService.fetchWishSubCategories(categoryId);
+    } catch (e) {
+      wishSubCategories = [];
+    }
+    setState(() {
+      isLoadingSubCategories = false;
+    });
+  }
+
+  Future<void> fetchWishBrands(String subCategoryId) async {
+    setState(() {
+      isLoadingBrands = true;
+    });
+    try {
+      wishBrands = await wishkaroService.fetchWishBrands(subCategoryId);
+    } catch (e) {
+      wishBrands = [];
+    }
+    setState(() {
+      isLoadingBrands = false;
+    });
+  }
+
+  Future<void> pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        selectedImages.add(File(pickedFile.path));
+      });
+    }
+  }
+
+  Future<void> pickFromDate(BuildContext context) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: fromDate ?? now,
+      firstDate: now,
+      lastDate: now.add(Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() {
+        fromDate = picked;
+        // Reset toDate if it is now invalid
+        if (toDate != null &&
+            (toDate!.isBefore(fromDate!.add(Duration(days: 1))) ||
+                toDate!.isAfter(fromDate!.add(Duration(days: 31))))) {
+          toDate = null;
+        }
+      });
+    }
+  }
+
+  Future<void> pickToDate(BuildContext context) async {
+    if (fromDate == null) return;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: toDate ?? fromDate!.add(Duration(days: 1)),
+      firstDate: fromDate!.add(Duration(days: 1)),
+      lastDate: fromDate!.add(Duration(days: 31)),
+    );
+    if (picked != null) {
+      setState(() {
+        toDate = picked;
+      });
+    }
+  }
+
+  // Add helper to show selection dialog
+  Future<T?> showSelectionDialog<T>(
+      BuildContext context, List<T> items, String Function(T) getLabel) async {
+    return showDialog<T>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        children: items
+            .map((item) => SimpleDialogOption(
+                  child: Text(getLabel(item)),
+                  onPressed: () => Navigator.pop(context, item),
+                ))
+            .toList(),
+      ),
+    );
+  }
+
+  Future<void> submitWish() async {
+    // Validate required fields
+    if (selectedCategoryId == null ||
+        selectedSubCategoryId == null ||
+        selectedBrandId == null ||
+        fromDate == null ||
+        toDate == null ||
+        selectedQuantityType == null ||
+        quantityController.text.isEmpty ||
+        minPriceController.text.isEmpty ||
+        totalCostController.text.isEmpty ||
+        productDetails.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(
+                'Please fill all required fields and add at least one image.')),
+      );
+      return;
+    }
+
+    // Convert images to base64
+    List<String> productImages = [];
+    for (var file in selectedImages) {
+      final bytes = await file.readAsBytes();
+      productImages.add(base64Encode(bytes));
+    }
+
+    final data = {
+      "wish_category_id": selectedCategoryId,
+      "wish_sub_category_id": selectedSubCategoryId,
+      "wish_brand_id": selectedBrandId,
+      "start_date": fromDate!.toIso8601String(),
+      "end_date": toDate!.toIso8601String(),
+      "quantity": int.tryParse(quantityController.text) ?? 0,
+      "min_price": int.tryParse(minPriceController.text) ?? 0,
+      "total_cost": int.tryParse(totalCostController.text) ?? 0,
+      "product_detail": productDetails.text,
+      "product_images": productImages,
+      "quantity_type": selectedQuantityType,
+    };
+
+    print('Submitting wish data: $data');
+    try {
+      final response = await wishkaroService.createWish(data);
+      print('Create wish response: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Show success dialog or handle success
+        showCustomDialogProfile(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to submit wish: ${response.body}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,106 +274,161 @@ class _NewWishKaroScreenState extends State<NewWishKaroScreen> {
                     size: 16),
               ),
               buildVSpacer(20),
-              GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      isClicked1=!isClicked1;
-                    });
-                  }, child: wishKaroMethod1(title: "Category")),
+              // Category selection
+              DropdownButton<String>(
+                isExpanded: true,
+                value: selectedCategoryId,
+                hint: Text('Category',
+                    style: TextStyle(color: Color(0xffF4BC1C))),
+                items: wishCategories.map<DropdownMenuItem<String>>((cat) {
+                  return DropdownMenuItem<String>(
+                    value: cat['_id'],
+                    child: Text(cat['name'] ?? '',
+                        style: TextStyle(color: Color(0xffF4BC1C))),
+                  );
+                }).toList(),
+                onChanged: (value) async {
+                  setState(() {
+                    selectedCategoryId = value;
+                    selectedSubCategoryId = null;
+                    selectedBrandId = null;
+                    wishSubCategories = [];
+                    wishBrands = [];
+                  });
+                  if (value != null) await fetchWishSubCategories(value);
+                },
+              ),
               buildVSpacer(20),
-          isClicked1?    Container(
-                width: Adaptive.w(100),
-                padding: EdgeInsets.all(12.sp),
-                decoration: BoxDecoration(
-                    border: Border.all(color: buttonColor),
-                    borderRadius: BorderRadius.circular(12.sp)),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildText(
-                        title: "Electrionics",
-                        size: 12.px,
-                        fontWeight: FontWeight.w500,
-                        color: buttonColor),
-                    buildVSpacer(2.h),
-                    _buildText(
-                        title: "Automobiles",
-                        size: 12.px,
-                        fontWeight: FontWeight.w500,
-                        color: buttonColor),
-                    buildVSpacer(2.h),
-                    _buildText(
-                        title: "Daily Needs",
-                        size: 12.px,
-                        fontWeight: FontWeight.w500,
-                        color: buttonColor),
-                    buildVSpacer(2.h),
-                    _buildText(
-                        title: "Construction Material",
-                        size: 10.px,
-                        fontWeight: FontWeight.w500,
-                        color: buttonColor),
-                    buildVSpacer(2.h),
-                    _buildText(
-                        title: "Medicine",
-                        size: 12.px,
-                        fontWeight: FontWeight.w500,
-                        color: buttonColor),
-                  ],
-                ),
-              ):const SizedBox(),
+              // Subcategory selection
+              isClicked1
+                  ? Container(
+                      width: Adaptive.w(100),
+                      padding: EdgeInsets.all(12.sp),
+                      decoration: BoxDecoration(
+                          border: Border.all(color: buttonColor),
+                          borderRadius: BorderRadius.circular(12.sp)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildText(
+                              title: "Electrionics",
+                              size: 12.px,
+                              fontWeight: FontWeight.w500,
+                              color: buttonColor),
+                          buildVSpacer(2.h),
+                          _buildText(
+                              title: "Automobiles",
+                              size: 12.px,
+                              fontWeight: FontWeight.w500,
+                              color: buttonColor),
+                          buildVSpacer(2.h),
+                          _buildText(
+                              title: "Daily Needs",
+                              size: 12.px,
+                              fontWeight: FontWeight.w500,
+                              color: buttonColor),
+                          buildVSpacer(2.h),
+                          _buildText(
+                              title: "Construction Material",
+                              size: 10.px,
+                              fontWeight: FontWeight.w500,
+                              color: buttonColor),
+                          buildVSpacer(2.h),
+                          _buildText(
+                              title: "Medicine",
+                              size: 12.px,
+                              fontWeight: FontWeight.w500,
+                              color: buttonColor),
+                        ],
+                      ),
+                    )
+                  : const SizedBox(),
               buildVSpacer(2.h),
-              GestureDetector(
-                 onTap: () {
-                    setState(() {
-                      isClicked2=!isClicked2;
-                    });
-                 },
-                child: wishKaroMethod1(title: "Sub-Category")),
+              // Subcategory selection
+              DropdownButton<String>(
+                isExpanded: true,
+                value: selectedSubCategoryId,
+                hint: Text('Sub-Category',
+                    style: TextStyle(color: Color(0xffF4BC1C))),
+                items: wishSubCategories.map<DropdownMenuItem<String>>((sub) {
+                  return DropdownMenuItem<String>(
+                    value: sub['_id'],
+                    child: Text(sub['name'] ?? '',
+                        style: TextStyle(color: Color(0xffF4BC1C))),
+                  );
+                }).toList(),
+                onChanged: (value) async {
+                  setState(() {
+                    selectedSubCategoryId = value;
+                    selectedBrandId = null;
+                    wishBrands = [];
+                  });
+                  if (value != null) await fetchWishBrands(value);
+                },
+              ),
               buildVSpacer(20),
-            isClicked2?  Container(
-                width: Adaptive.w(100),
-                padding: EdgeInsets.all(12.sp),
-                decoration: BoxDecoration(
-                    border: Border.all(color: buttonColor),
-                    borderRadius: BorderRadius.circular(12.sp)),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildText(
-                        title: "Waching Mechine",
-                        size: 12.px,
-                        fontWeight: FontWeight.w500,
-                        color: buttonColor),
-                    buildVSpacer(2.h),
-                    _buildText(
-                        title: "Tv",
-                        size: 12.px,
-                        fontWeight: FontWeight.w500,
-                        color: buttonColor),
-                    buildVSpacer(2.h),
-                    _buildText(
-                        title: "Fridge",
-                        size: 12.px,
-                        fontWeight: FontWeight.w500,
-                        color: buttonColor),
-                    buildVSpacer(2.h),
-                    _buildText(
-                        title: "Owen",
-                        size: 10.px,
-                        fontWeight: FontWeight.w500,
-                        color: buttonColor),
-                    buildVSpacer(2.h),
-                    _buildText(
-                        title: "Mixer",
-                        size: 12.px,
-                        fontWeight: FontWeight.w500,
-                        color: buttonColor),
-                  ],
-                ),
-              ):SizedBox(),
+              isClicked2
+                  ? Container(
+                      width: Adaptive.w(100),
+                      padding: EdgeInsets.all(12.sp),
+                      decoration: BoxDecoration(
+                          border: Border.all(color: buttonColor),
+                          borderRadius: BorderRadius.circular(12.sp)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildText(
+                              title: "Waching Mechine",
+                              size: 12.px,
+                              fontWeight: FontWeight.w500,
+                              color: buttonColor),
+                          buildVSpacer(2.h),
+                          _buildText(
+                              title: "Tv",
+                              size: 12.px,
+                              fontWeight: FontWeight.w500,
+                              color: buttonColor),
+                          buildVSpacer(2.h),
+                          _buildText(
+                              title: "Fridge",
+                              size: 12.px,
+                              fontWeight: FontWeight.w500,
+                              color: buttonColor),
+                          buildVSpacer(2.h),
+                          _buildText(
+                              title: "Owen",
+                              size: 10.px,
+                              fontWeight: FontWeight.w500,
+                              color: buttonColor),
+                          buildVSpacer(2.h),
+                          _buildText(
+                              title: "Mixer",
+                              size: 12.px,
+                              fontWeight: FontWeight.w500,
+                              color: buttonColor),
+                        ],
+                      ),
+                    )
+                  : SizedBox(),
               buildVSpacer(2.h),
-              wishKaroMethod1(title: "Brand"),
+              // Brand selection
+              DropdownButton<String>(
+                isExpanded: true,
+                value: selectedBrandId,
+                hint: Text('Brand', style: TextStyle(color: Color(0xffF4BC1C))),
+                items: wishBrands.map<DropdownMenuItem<String>>((brand) {
+                  return DropdownMenuItem<String>(
+                    value: brand['_id'],
+                    child: Text(brand['name'] ?? '',
+                        style: TextStyle(color: Color(0xffF4BC1C))),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedBrandId = value;
+                  });
+                },
+              ),
               buildVSpacer(20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -196,14 +447,26 @@ class _NewWishKaroScreenState extends State<NewWishKaroScreen> {
                       SizedBox(
                         width: Adaptive.w(35),
                         height: Adaptive.h(6),
-                        child: const TextField(
-                          decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                  borderSide: BorderSide(color: Colors.white)),
-                              suffixIcon: Icon(
-                                Icons.calendar_month_outlined,
-                                color: Colors.white,
-                              )),
+                        child: GestureDetector(
+                          onTap: () => pickFromDate(context),
+                          child: AbsorbPointer(
+                            child: TextFormField(
+                              readOnly: true,
+                              enableInteractiveSelection: false,
+                              showCursor: false,
+                              decoration: InputDecoration(
+                                hintText: "Select From Date",
+                                border: OutlineInputBorder(),
+                                suffixIcon: Icon(Icons.calendar_today,
+                                    color: Color(0xffF4BC1C)),
+                              ),
+                              controller: TextEditingController(
+                                text: fromDate != null
+                                    ? fromDate!.toString().split(' ')[0]
+                                    : null,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -222,16 +485,26 @@ class _NewWishKaroScreenState extends State<NewWishKaroScreen> {
                       SizedBox(
                         width: Adaptive.w(35),
                         height: Adaptive.h(6),
-                        child: const TextField(
-                          decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                color: Colors.white,
-                              )),
-                              suffixIcon: Icon(
-                                Icons.calendar_month_outlined,
-                                color: Colors.white,
-                              )),
+                        child: GestureDetector(
+                          onTap: () => pickToDate(context),
+                          child: AbsorbPointer(
+                            child: TextFormField(
+                              readOnly: true,
+                              enableInteractiveSelection: false,
+                              showCursor: false,
+                              decoration: InputDecoration(
+                                hintText: "Select To Date",
+                                border: OutlineInputBorder(),
+                                suffixIcon: Icon(Icons.calendar_today,
+                                    color: Color(0xffF4BC1C)),
+                              ),
+                              controller: TextEditingController(
+                                text: toDate != null
+                                    ? toDate!.toString().split(' ')[0]
+                                    : null,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -246,52 +519,18 @@ class _NewWishKaroScreenState extends State<NewWishKaroScreen> {
                     color: const Color(0xffF4BC1C)),
               ),
               buildCustomTextField3(
-                hintText: "Select Quantity",
+                hintText: "Quantity",
+                controller: quantityController,
               ),
-              buildVSpacer(1.h),
               Row(
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xffF4BC1C),
-                      borderRadius: BorderRadius.circular(20.0),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: _buildTextHeader(title: "Ton", size: 12),
-                    ),
-                  ),
+                  _buildQuantityTypeButton("Ton"),
                   buildHSpacer(5),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20.0),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 8.0, horizontal: 16),
-                    child: _buildTextHeader(title: "QT", size: 12),
-                  ),
+                  _buildQuantityTypeButton("QT"),
                   buildHSpacer(5),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xffF4BC1C),
-                      borderRadius: BorderRadius.circular(20.0),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: _buildTextHeader(title: "Kg", size: 12),
-                    ),
-                  ),
+                  _buildQuantityTypeButton("Kg"),
                   buildHSpacer(5),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xffF4BC1C),
-                      borderRadius: BorderRadius.circular(20.0),
-                    ),
-                    padding: EdgeInsets.symmetric(
-                        horizontal: Adaptive.w(4), vertical: Adaptive.h(1)),
-                    child: _buildTextHeader(title: "Packet", size: 12),
-                  ),
+                  _buildQuantityTypeButton("Packet"),
                 ],
               ),
               buildVSpacer(1.h),
@@ -301,7 +540,10 @@ class _NewWishKaroScreenState extends State<NewWishKaroScreen> {
                     title: "Min Price (approx) ",
                     color: const Color(0xffF4BC1C)),
               ),
-              buildCustomTextField3(hintText: "₹ 2400"),
+              buildCustomTextField3(
+                hintText: "Minimum Cost",
+                controller: minPriceController,
+              ),
               buildVSpacer(1.h),
               Align(
                 alignment: Alignment.centerLeft,
@@ -309,7 +551,10 @@ class _NewWishKaroScreenState extends State<NewWishKaroScreen> {
                     title: "Total Cost (approx) ",
                     color: const Color(0xffF4BC1C)),
               ),
-              buildCustomTextField3(hintText: "₹ 2,40,000"),
+              buildCustomTextField3(
+                hintText: "₹ 2400",
+                controller: totalCostController,
+              ),
               buildVSpacer(1.h),
               Align(
                   alignment: Alignment.centerLeft,
@@ -317,16 +562,16 @@ class _NewWishKaroScreenState extends State<NewWishKaroScreen> {
                       title: "Product Details",
                       color: const Color(0xffF4BC1C))),
               buildVSpacer(1.h),
-              Container(
-                height: Adaptive.h(12),
-                width: Adaptive.w(100),
-                // padding: EdgeInsets.all(12.sp),
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12.sp),
-                    border: Border.all(color: buttonColor)),
-                child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: _buildText(title: "Loremipsum", color: buttonColor)),
+              TextField(
+                maxLines: 4,
+                controller: productDetails,
+                decoration: InputDecoration(
+                  hintText: "Enter product details...",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: buttonColor),
+                  ),
+                ),
               ),
               buildVSpacer(1.h),
               Align(
@@ -335,10 +580,31 @@ class _NewWishKaroScreenState extends State<NewWishKaroScreen> {
                       title: "Add Product Images",
                       color: const Color(0xffF4BC1C))),
               buildVSpacer(1.h),
-              Image.asset(
-                "assets/add_image.png",
-                width: Adaptive.w(100),
-                fit: BoxFit.fill,
+              GestureDetector(
+                onTap: pickImage,
+                child: Container(
+                  height: Adaptive.h(12),
+                  width: Adaptive.w(100),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: buttonColor),
+                  ),
+                  child: selectedImages.isEmpty
+                      ? Center(
+                          child: Icon(Icons.add_a_photo, color: buttonColor))
+                      : ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: selectedImages
+                              .map((img) => Padding(
+                                    padding: const EdgeInsets.all(4.0),
+                                    child: Image.file(img,
+                                        width: 80,
+                                        height: 80,
+                                        fit: BoxFit.cover),
+                                  ))
+                              .toList(),
+                        ),
+                ),
               ),
               buildVSpacer(1.5.h),
               GestureDetector(
@@ -541,7 +807,7 @@ class _NewWishKaroScreenState extends State<NewWishKaroScreen> {
                     : CustomButton(
                         text: "Submit",
                         onPressed: () {
-                          showCustomDialogProfile(context);
+                          submitWish();
 
                           // setState(() {
                           //   isClickedNext=true;
@@ -766,6 +1032,32 @@ class _NewWishKaroScreenState extends State<NewWishKaroScreen> {
           fontWeight: fontWeight ?? FontWeight.w400,
           // fontFamily: 'Poppins',
           color: color ?? Colors.black),
+    );
+  }
+
+  Widget _buildQuantityTypeButton(String type) {
+    final isSelected = selectedQuantityType == type;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          selectedQuantityType = type;
+        });
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xffF4BC1C) : Colors.white,
+          borderRadius: BorderRadius.circular(20.0),
+          border: Border.all(color: const Color(0xffF4BC1C)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Text(
+          type,
+          style: TextStyle(
+            color: isSelected ? Colors.black : Colors.grey[800],
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -90,22 +90,294 @@ class _TradeSettlementScreenState extends State<TradeSettlementScreen> {
         return Center(child: CircularProgressIndicator());
       }
       if (tradeSettlementService.error.value.isNotEmpty) {
-        return Center(
-            child: Text('Error: ' + tradeSettlementService.error.value));
+        return Center(child: Text(tradeSettlementService.error.value));
       }
-      if (tradeSettlementService.settlements.isEmpty) {
-        return Center(child: Text('No settlements found.'));
-      }
+
+      // If empty, add a sample settlement for showcase
+      final settlements = tradeSettlementService.settlements.isEmpty
+          ? [
+              TradeSettlementModel(
+                adId: "250-02233",
+                postedDate: "12-02-2023",
+                cropName: "Wheat",
+                varietyName: "Wheat G1",
+                location: "Bangalore",
+                quantity: 100,
+                quantityType: "QT",
+                minPrice: 2400,
+                totalCost: 240000,
+                description:
+                    "Turmeric, A Plant In The Ginger Family, Is Native To South East Asia And Is Grown Commercially In That Region.",
+                orderId: "67001",
+                orderDate: "04-April-24",
+                buyerName: "Rahul Tiwari",
+                buyerMobile: "+91 1234567890",
+                buyerAddress:
+                    "Mg-Road, Street No : 6, 9th Cross, Beside Canara Bank, Bengaluru , Karnataka - 560001",
+                buyerRating: 4.5,
+              )
+            ]
+          : tradeSettlementService.settlements
+              .toList()
+              .cast<TradeSettlementModel>();
+
       return ListView.builder(
         shrinkWrap: true,
         physics: NeverScrollableScrollPhysics(),
-        itemCount: tradeSettlementService.settlements.length,
+        itemCount: settlements.length,
         itemBuilder: (context, index) {
-          final settlement = tradeSettlementService.settlements[index];
-          return Card(
-            child: ListTile(
-              title: Text('Settlement'),
-              subtitle: Text('Details: ...'), // Add real fields as needed
+          final settlement = settlements[index];
+          return Padding(
+            padding: const EdgeInsets.all(10),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // AD ID and Posted Date
+                      Row(
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(top: 12, left: 12),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Color(0xff3A7BD5),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "AD ID : ${settlement.adId}",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                Text(
+                                  "Posted Date : ${settlement.postedDate}",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Spacer(),
+                          Container(
+                            margin: const EdgeInsets.only(top: 12, right: 12),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Color(0xffF4BC1C),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.verified,
+                                    color: Colors.black, size: 16),
+                                SizedBox(width: 4),
+                                Text(
+                                  "Verified",
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Product Info
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14.0, vertical: 12),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const CircleAvatar(
+                              radius: 28,
+                              backgroundImage: AssetImage("assets/pro.png"),
+                            ),
+                            SizedBox(width: 20),
+                            // Product Details
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(settlement.cropName,
+                                      style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold)),
+                                  Text('Variety :  ${settlement.varietyName}',
+                                      style: TextStyle(fontSize: 11)),
+                                  Text("Location : ${settlement.location}",
+                                      style: TextStyle(fontSize: 11)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Divider(color: Color(0xffF4BC1C), thickness: 1),
+                      // Quantity, Min Price, Total Cost
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14.0, vertical: 4),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Text("Quantity (approx.)"),
+                                Spacer(),
+                                Text(
+                                    "${settlement.quantity} ${settlement.quantityType}"),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Text("Min-Price (approx.)"),
+                                Spacer(),
+                                Text("₹ ${settlement.minPrice}"),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Text("Total Cost (approx.)"),
+                                Spacer(),
+                                Text("₹ ${settlement.totalCost}"),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Description
+                      if (settlement.description != null &&
+                          settlement.description!.isNotEmpty)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Color(0xffF4BC1C),
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                          child: Text(
+                            "Description : ${settlement.description}",
+                            style: TextStyle(fontSize: 11, color: Colors.black),
+                          ),
+                        ),
+                      // Order/User Info
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 0, vertical: 0),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Color(0xffF4BC1C),
+                          borderRadius: BorderRadius.only(
+                            bottomLeft: Radius.circular(8),
+                            bottomRight: Radius.circular(8),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.check_circle,
+                                color: Colors.green, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              "Order ID : ${settlement.orderId}",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Spacer(),
+                            Text(
+                              "Date : ${settlement.orderDate}",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Buyer/User Info
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 0, vertical: 0),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Color(0xffF4BC1C),
+                          borderRadius: BorderRadius.only(
+                            bottomLeft: Radius.circular(8),
+                            bottomRight: Radius.circular(8),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundImage: AssetImage("assets/pro.png"),
+                              radius: 20,
+                            ),
+                            SizedBox(width: 8),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  settlement.buyerName,
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                Text(
+                                  "Mobile : ${settlement.buyerMobile}",
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                Text(
+                                  "Address : ${settlement.buyerAddress}",
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Spacer(),
+                            Row(
+                              children: [
+                                Icon(Icons.star, color: Colors.amber, size: 16),
+                                Text("${settlement.buyerRating}",
+                                    style: TextStyle(color: Colors.black)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           );
         },

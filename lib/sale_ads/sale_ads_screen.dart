@@ -323,7 +323,7 @@ class _SaleAddScreenState extends State<SaleAddScreen> {
                       padding:
                           EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Color(0xFF96510C), // Brown color
+                        color: Colors.blue, // Brown color
                         borderRadius: BorderRadius.only(
                           topRight: Radius.circular(20),
                           bottomLeft: Radius.circular(20),
@@ -340,7 +340,7 @@ class _SaleAddScreenState extends State<SaleAddScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Buy ID : ${ad.buyId ?? '-'}',
+                                'Sell ID : ${ad.buyId ?? '-'}',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
