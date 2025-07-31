@@ -1083,7 +1083,7 @@ class _PostSellAdScreenState extends State<PostSellAdScreen> {
                         cropName: cropName,
                         varietyName: varietyName,
                         varietyTypes: varietyTypes,
-                        mitraVerification: mitraVerification,
+                        mitraVerification: false,
                         userIsMitra: userIsMitra,
                         startDate: fromDate,
                         endDate: toDate,

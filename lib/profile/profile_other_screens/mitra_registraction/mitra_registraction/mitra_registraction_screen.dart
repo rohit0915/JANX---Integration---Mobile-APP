@@ -21,8 +21,9 @@ class MitraRegistractionScreen extends StatefulWidget {
 }
 
 class _MitraRegistractionScreenState extends State<MitraRegistractionScreen> {
-  bool isClicked1 = false;
-  bool isClicked2 = false;
+  String? selectedAccountType; // "Company" or "Individual"
+  String? selectedIndustry; // "Agriculture" or "Pharma"
+
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
 
@@ -45,8 +46,7 @@ class _MitraRegistractionScreenState extends State<MitraRegistractionScreen> {
 
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) return 'Email is required';
-    final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+?$');
-    if (!emailRegex.hasMatch(value)) return 'Enter a valid email';
+
     return null;
   }
 
@@ -107,8 +107,9 @@ class _MitraRegistractionScreenState extends State<MitraRegistractionScreen> {
     );
     // Prepare data
     final data = {
-      "account_type": isClicked1 ? "Company" : "Individual",
-      "industry": isClicked2 ? "Pharma" : "Agriculture",
+      "account_type": selectedAccountType ?? '',
+      "industry": selectedIndustry ?? '',
+
       "first_name": firstNameController.text,
       "last_name": lastNameController.text,
       "mobile": mobileController.text,
@@ -120,10 +121,7 @@ class _MitraRegistractionScreenState extends State<MitraRegistractionScreen> {
       // For demo, image upload is not implemented. Add image logic if needed.
       // "passport_size_photo": _selectedImage != null ? base64Encode(_selectedImage!.readAsBytesSync()) : null,
       "location": {
-        "coordinates": [
-          77.5946,
-          12.9716
-        ] // Bangalore coordinates (longitude, latitude)
+        "coordinates": [77.5946, 12.9716]
       },
     };
     print('Submitting Mitra Registration Data:');
@@ -136,24 +134,24 @@ class _MitraRegistractionScreenState extends State<MitraRegistractionScreen> {
       Navigator.pop(context);
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Mitra registration successful!')),
+          const SnackBar(content: Text('Mitra registration successful!')),
         );
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => MitraSubscriptionScreen(),
+            builder: (context) => const MitraSubscriptionScreen(),
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to register Mitra.')),
+          const SnackBar(content: Text('User Already Registerd.')),
         );
       }
     } catch (e) {
       Navigator.pop(context);
       print('Mitra Registration Error: ${e.toString()}');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ' + e.toString())),
+        SnackBar(content: Text('Error: $e')),
       );
     }
   }
@@ -425,154 +423,76 @@ class _MitraRegistractionScreenState extends State<MitraRegistractionScreen> {
 
   Column registerIndustryMethod() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child:
-              _buildText(title: "Select Industry", size: 12.px, color: white),
-        ),
-        GestureDetector(
-          onTap: () {
-            setState(() {
-              isClicked2 = !isClicked2;
-            });
-          },
-          child: Container(
-            height: Adaptive.h(6),
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(13.sp),
-                border: Border.all(color: white)),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Icon(
-                  Icons.arrow_drop_down,
-                  color: white,
-                )
-              ],
+        _buildText(title: "Select Industry", size: 12.px, color: white),
+        buildVSpacer(1.h),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 3.w),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(13.sp),
+            border: Border.all(color: white),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              dropdownColor: Colors.white,
+              value: selectedIndustry,
+              hint: _buildText(title: "Select", size: 14.px, color: white),
+              isExpanded: true,
+              items: ['Agriculture', 'Pharma'].map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: _buildText(
+                      title: value, size: 14.px, fontWeight: FontWeight.w500),
+                );
+              }).toList(),
+              onChanged: (String? value) {
+                setState(() {
+                  selectedIndustry = value!;
+                });
+              },
+              icon: Icon(Icons.arrow_drop_down, color: white),
             ),
           ),
         ),
-        isClicked2
-            ? Container(
-                padding: EdgeInsets.all(14.sp),
-                decoration: const BoxDecoration(color: white),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: false,
-                          onChanged: (value) {},
-                        ),
-                        buildHSpacer(4.w),
-                        _buildText(
-                            title: "Agriculture",
-                            size: 14.px,
-                            fontWeight: FontWeight.w500)
-                      ],
-                    ),
-                    buildVSpacer(2.h),
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: false,
-                          onChanged: (value) {},
-                        ),
-                        buildHSpacer(4.w),
-                        _buildText(
-                            title: "Pharma",
-                            size: 14.px,
-                            fontWeight: FontWeight.w500)
-                      ],
-                    )
-                  ],
-                ),
-              )
-            : const SizedBox()
       ],
     );
   }
 
   Column registerMethod() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: _buildText(
-              title: "You want to register", size: 12.px, color: white),
-        ),
-        GestureDetector(
-          onTap: () {
-            setState(() {
-              isClicked1 = !isClicked1;
-            });
-          },
-          child: Container(
-            height: Adaptive.h(6),
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(13.sp),
-                border: Border.all(color: white)),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Icon(
-                  Icons.arrow_drop_down,
-                  color: white,
-                )
-              ],
+        _buildText(title: "You want to register", size: 12.px, color: white),
+        buildVSpacer(1.h),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 3.w),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(13.sp),
+            border: Border.all(color: white),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              dropdownColor: Colors.white,
+              value: selectedAccountType,
+              hint: _buildText(title: "Select", size: 14.px, color: black),
+              isExpanded: true,
+              items: ['Company', 'Individual'].map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: _buildText(
+                      title: value, size: 14.px, fontWeight: FontWeight.w500),
+                );
+              }).toList(),
+              onChanged: (String? value) {
+                setState(() {
+                  selectedAccountType = value!;
+                });
+              },
+              icon: Icon(Icons.arrow_drop_down, color: white),
             ),
           ),
         ),
-        isClicked1
-            ? Container(
-                padding: EdgeInsets.all(14.sp),
-                decoration: const BoxDecoration(color: white),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: Adaptive.w(3.5),
-                          backgroundColor: const Color(0xff444444),
-                          child: Center(
-                            child: CircleAvatar(
-                              radius: Adaptive.w(2),
-                              backgroundColor: buttonColor,
-                            ),
-                          ),
-                        ),
-                        buildHSpacer(4.w),
-                        _buildText(
-                            title: "On behalf of your company",
-                            size: 14.px,
-                            fontWeight: FontWeight.w500)
-                      ],
-                    ),
-                    buildVSpacer(2.h),
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: Adaptive.w(3.5),
-                          backgroundColor: const Color(0xff444444),
-                          child: Center(
-                            child: CircleAvatar(
-                              radius: Adaptive.w(2),
-                              backgroundColor: white,
-                            ),
-                          ),
-                        ),
-                        buildHSpacer(4.w),
-                        _buildText(
-                            title: "On behalf of your company",
-                            size: 14.px,
-                            fontWeight: FontWeight.w500)
-                      ],
-                    )
-                  ],
-                ),
-              )
-            : const SizedBox()
       ],
     );
   }
